@@ -18,7 +18,14 @@ if PROJECT_DIR not in sys.path:
 from tools import search_food_nutrition
 
 # 2. API 키 및 클라이언트 초기화 (배포 환경 및 로컬 환경 동시 대응)
-GEMINI_API_KEY = getattr(st, 'secrets', {}).get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+try:
+    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY가 설정되지 않았습니다. Streamlit Cloud의 Settings -> Secrets에 키를 등록해주세요.")
+
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # 3. 에이전트 시스템 프롬프트
