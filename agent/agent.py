@@ -18,7 +18,7 @@ if PROJECT_DIR not in sys.path:
 from tools import search_food_nutrition
 
 # 2. API 키 및 클라이언트 초기화 (배포 환경 및 로컬 환경 동시 대응)
-GEMINI_API_KEY = getattr(st, 'secrets', {}).get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6IV9Uq7G9MV3WNCiBQDdfO4ig_Wid-jc6aLO__5jhbd0g"))
+GEMINI_API_KEY = getattr(st, 'secrets', {}).get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 # 3. 에이전트 시스템 프롬프트
