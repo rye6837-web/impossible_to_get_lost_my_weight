@@ -25,21 +25,23 @@ def get_or_create_agent(api_key: str = ""):
     except Exception:
         return None
 
-from db.database import (
-    register_user, 
-    authenticate_user, 
-    update_user_goals, 
-    update_user_profile,
-    update_user_telegram,
-    get_user_by_id, 
-    calculate_recommended_nutrition,
-    add_meal_record,
-    delete_meal_record,
-    get_daily_summary,
-    get_weekly_summary,
-    get_monthly_summary,
-    get_yearly_summary
-)
+import importlib
+import db.database as db_module
+importlib.reload(db_module)
+
+register_user = db_module.register_user
+authenticate_user = db_module.authenticate_user
+update_user_goals = db_module.update_user_goals
+update_user_profile = db_module.update_user_profile
+update_user_telegram = db_module.update_user_telegram
+get_user_by_id = db_module.get_user_by_id
+calculate_recommended_nutrition = db_module.calculate_recommended_nutrition
+add_meal_record = db_module.add_meal_record
+delete_meal_record = db_module.delete_meal_record
+get_daily_summary = db_module.get_daily_summary
+get_weekly_summary = db_module.get_weekly_summary
+get_monthly_summary = db_module.get_monthly_summary
+get_yearly_summary = db_module.get_yearly_summary
 
 # 2. Streamlit 웹 페이지 설정
 st.set_page_config(page_title="AI 다이어트 & 영양 코치", page_icon="🥗", layout="wide")
