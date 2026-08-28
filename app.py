@@ -18,6 +18,7 @@ for p in [BASE_DIR, AGENT_DIR, TOOLS_DIR, DB_DIR]:
         sys.path.insert(0, p)
 
 from agent import create_diet_agent
+from tools.telegram_service import send_telegram_monthly_report, send_telegram_message, get_telegram_bot_token
 
 def get_or_create_agent(api_key: str = ""):
     try:
@@ -631,18 +632,59 @@ with tab_settings:
     st.divider()
     
     # 3. 텔레그램 연동 섹션
-    st.markdown("#### 📱 텔레그램 리포트 연동 (4단계 준비)")
+    st.markdown("#### 📱 텔레그램 리포트 연동")
     st.caption("매월 1일 월간 식단 결산 통계 리포트를 텔레그램으로 자동 전송받을 수 있습니다.")
-    with st.form("update_telegram_form"):
-        current_tg = current_user.get("telegram_chat_id") or ""
-        new_tg_id = st.text_input("텔레그램 Chat ID", value=current_tg, placeholder="예: 123456789")
-        save_tg_btn = st.form_submit_button("텔레그램 ID 저장", use_container_width=True)
-        
-        if save_tg_btn:
-            if update_user_telegram(user_id, new_tg_id):
-                st.success("텔레그램 Chat ID가 저장되었습니다!")
+    
+    col_tg1, col_tg2 = st.columns(2)
+    with col_tg1:
+        with st.form("update_telegram_form"):
+            current_tg = current_user.get("telegram_chat_id") or ""
+            new_tg_id = st.text_input("텔레그램 Chat ID", value=current_tg, placeholder="예: 123456789")
+            save_tg_btn = st.form_submit_button("텔레그램 Chat ID 저장", use_container_width=True, type="primary")
+            
+            if save_tg_btn:
+                if update_user_telegram(user_id, new_tg_id):
+                    st.success("텔레그램 Chat ID가 저장되었습니다!")
+                    st.rerun()
+                else:
+                    st.error("텔레그램 ID 저장 실패")
+                    
+        # 봇 토큰 설정
+        saved_bot_token = get_telegram_bot_token()
+        with st.form("update_bot_token_form"):
+            tg_token_input = st.text_input("텔레그램 Bot Token", value=saved_bot_token, type="password", placeholder="7123456789:AAH...")
+            save_token_btn = st.form_submit_button("Bot Token 적용", use_container_width=True)
+            if save_token_btn and tg_token_input.strip():
+                st.session_state["TELEGRAM_BOT_TOKEN"] = tg_token_input.strip()
+                st.success("봇 토큰이 적용되었습니다!")
                 st.rerun()
-            else:
-                st.error("텔레그램 ID 저장 실패")
-                
-    st.info("💡 텔레그램에서 `@userinfobot`을 검색하여 대화를 시작하면 본인의 고유 **Chat ID** 숫자를 바로 확인할 수 있습니다.")
+
+    with col_tg2:
+        st.markdown("##### 🚀 텔레그램 리포트 테스트 발송")
+        if not current_user.get("telegram_chat_id"):
+            st.warning("⚠️ Chat ID를 먼저 등록해주세요.")
+        elif not get_telegram_bot_token():
+            st.warning("⚠️ 텔레그램 Bot Token을 등록해주세요.")
+        else:
+            st.success(f"✅ 연동 완료! (Chat ID: `{current_user.get('telegram_chat_id')}`)")
+            
+            now_dt = datetime.now()
+            if st.button("📲 이번 달 식단 결산 리포트 즉시 전송", use_container_width=True, type="primary"):
+                with st.spinner("텔레그램으로 월간 결산 리포트 전송 중..."):
+                    ok, msg = send_telegram_monthly_report(user_id, now_dt.year, now_dt.month)
+                    if ok:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+                        
+            if st.button("✉️ 연동 확인 테스트 메시지 전송", use_container_width=True):
+                ok, msg = send_telegram_message(
+                    current_user["telegram_chat_id"], 
+                    "🎉 *[AI 다이어트 코치]*\n텔레그램 알림 연동이 성공적으로 완료되었습니다! 매달 1일에 월간 식단 통계 리포트가 전송됩니다."
+                )
+                if ok:
+                    st.success("테스트 메시지가 발송되었습니다! 텔레그램을 확인해보세요.")
+                else:
+                    st.error(msg)
+
+    st.info("💡 텔레그램 `@BotFather`에서 발급받은 **Bot Token**을 입력하시면 즉시 알림 전송이 활성화됩니다.")
