@@ -49,7 +49,7 @@ class DietAgent:
         
         self.client = genai.Client(api_key=self.api_key)
         self.chat = self.client.chats.create(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 tools=[search_food_nutrition],
