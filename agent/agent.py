@@ -2,7 +2,6 @@ import os
 import sys
 import streamlit as st
 from google import genai
-# pyrefly: ignore [missing-import]
 from google.genai import types
 
 # 1. 모듈 경로 설정
@@ -17,16 +16,19 @@ if PROJECT_DIR not in sys.path:
 
 from tools import search_food_nutrition
 
-# 2. API 키 및 클라이언트 초기화 (배포 환경 및 로컬 환경 동시 대응)
-try:
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-except Exception:
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY가 설정되지 않았습니다. Streamlit Cloud의 Settings -> Secrets에 키를 등록해주세요.")
-
-client = genai.Client(api_key=GEMINI_API_KEY)
+def get_api_key() -> str:
+    """Gemini API 키를 여러 소스에서 순차적으로 탐색합니다."""
+    # 1. Streamlit session_state
+    if "GEMINI_API_KEY" in st.session_state and st.session_state["GEMINI_API_KEY"]:
+        return st.session_state["GEMINI_API_KEY"]
+    # 2. Streamlit secrets
+    try:
+        if "GEMINI_API_KEY" in st.secrets:
+            return st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        pass
+    # 3. 환경 변수
+    return os.getenv("GEMINI_API_KEY", "")
 
 # 3. 에이전트 시스템 프롬프트
 SYSTEM_INSTRUCTION = """
@@ -40,9 +42,14 @@ SYSTEM_INSTRUCTION = """
 """
 
 class DietAgent:
-    def __init__(self):
-        self.chat = client.chats.create(
-            model="gemini-3.1-flash-lite",
+    def __init__(self, api_key: str = ""):
+        self.api_key = api_key or get_api_key()
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY가 설정되지 않았습니다. API 키를 입력하거나 .streamlit/secrets.toml에 등록해주세요.")
+        
+        self.client = genai.Client(api_key=self.api_key)
+        self.chat = self.client.chats.create(
+            model="gemini-2.5-flash",
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 tools=[search_food_nutrition],
@@ -56,8 +63,8 @@ class DietAgent:
         response = self.chat.send_message(contents)
         return response.text
 
-def create_diet_agent():
-    return DietAgent()
+def create_diet_agent(api_key: str = ""):
+    return DietAgent(api_key=api_key)
 
 if __name__ == "__main__":
     print("🤖 최신 AI 다이어트 코치 에이전트 테스트 중...")
