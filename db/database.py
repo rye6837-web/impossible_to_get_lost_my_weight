@@ -216,6 +216,21 @@ def update_user_goals(user_id: int, target_cal: int, target_protein: int) -> boo
     except Exception:
         return False
 
+def update_user_profile(user_id: int, gender: str, age: int, height: float, weight: float) -> bool:
+    """사용자의 신체 정보(성별, 나이, 키, 몸무게)를 갱신합니다."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE users
+                SET gender = ?, age = ?, height = ?, weight = ?
+                WHERE id = ?
+            """, (gender, age, height, weight, user_id))
+            conn.commit()
+            return True
+    except Exception:
+        return False
+
 def update_user_telegram(user_id: int, telegram_chat_id: str) -> bool:
     """사용자의 텔레그램 Chat ID를 갱신합니다."""
     try:

@@ -29,6 +29,7 @@ from db.database import (
     register_user, 
     authenticate_user, 
     update_user_goals, 
+    update_user_profile,
     update_user_telegram,
     get_user_by_id, 
     calculate_recommended_nutrition,
@@ -560,15 +561,63 @@ with tab_dashboard:
 # 3. 내 설정 & 텔레그램 연동 탭
 # ==========================================
 with tab_settings:
-    st.header("⚙️ 내 정보 & 텔레그램 연동 설정")
+    st.header("⚙️ 내 정보 & 환경 설정")
     
-    c_set1, c_set2 = st.columns(2)
-    with c_set1:
-        st.markdown("#### 🎯 다이어트 목표 설정")
+    col_prof, col_goals = st.columns(2)
+    
+    # 1. 신체 정보 (키, 몸무게 등) 수정
+    with col_prof:
+        st.markdown("#### 📏 신체 정보 수정 (키 / 몸무게)")
+        with st.form("update_profile_form"):
+            curr_gender = current_user.get("gender", "남성")
+            curr_age = int(current_user.get("age", 28))
+            curr_height = float(current_user.get("height", 175.0))
+            curr_weight = float(current_user.get("weight", 70.0))
+            
+            p_gender = st.selectbox("성별", ["남성", "여성"], index=0 if curr_gender == "남성" else 1)
+            p_age = st.number_input("나이 (세)", min_value=10, max_value=100, value=curr_age, step=1)
+            p_height = st.number_input("키 (cm)", min_value=100.0, max_value=250.0, value=curr_height, step=0.5)
+            p_weight = st.number_input("몸무게 (kg)", min_value=30.0, max_value=200.0, value=curr_weight, step=0.5)
+            
+            save_prof_btn = st.form_submit_button("신체 정보 저장", use_container_width=True, type="primary")
+            
+            if save_prof_btn:
+                if update_user_profile(user_id, p_gender, int(p_age), float(p_height), float(p_weight)):
+                    st.success("신체 정보가 성공적으로 수정되었습니다!")
+                    st.rerun()
+                else:
+                    st.error("신체 정보 저장 실패")
+
+    # 2. 다이어트 목표 설정
+    with col_goals:
+        st.markdown("#### 🎯 일일 다이어트 목표 설정")
+        
+        # 신체 정보 기준 자동 계산 도우미
+        with st.expander("💡 내 신체 기준 맞춤 목표 계산기", expanded=False):
+            calc_act = st.selectbox(
+                "활동량", 
+                ["활동 적음 (거의 운동 안 함)", "가벼운 활동 (주 1~3회 운동)", "보통 활동 (주 3~5회 운동)", "많은 활동 (주 6~7회 강한 운동)"],
+                index=1
+            )
+            calc_goal = st.selectbox(
+                "목적", 
+                ["체중 감량 (다이어트)", "체중 유지 (건강 관리)", "근육 증가 (벌크업)"],
+                index=0
+            )
+            rec_c, rec_p = calculate_recommended_nutrition(
+                gender=current_user.get("gender", "남성"),
+                age=int(current_user.get("age", 28)),
+                height=float(current_user.get("height", 175.0)),
+                weight=float(current_user.get("weight", 70.0)),
+                activity=calc_act,
+                goal=calc_goal
+            )
+            st.info(f"👉 추천 수치: **{rec_c} kcal** / **{rec_p} g**")
+            
         with st.form("update_goals_form"):
             new_target_cal = st.number_input("일일 목표 칼로리 (kcal)", min_value=1000, max_value=4500, value=target_cal, step=50)
             new_target_pro = st.number_input("일일 목표 단백질 (g)", min_value=30, max_value=300, value=target_protein, step=5)
-            save_goal_btn = st.form_submit_button("목표 저장", use_container_width=True, type="primary")
+            save_goal_btn = st.form_submit_button("목표 수치 저장", use_container_width=True, type="primary")
             
             if save_goal_btn:
                 if update_user_goals(user_id, new_target_cal, new_target_pro):
@@ -577,19 +626,21 @@ with tab_settings:
                 else:
                     st.error("목표 저장 실패")
 
-    with c_set2:
-        st.markdown("#### 📱 텔레그램 리포트 연동 (4단계 준비)")
-        st.caption("매월 1일 월간 식단 결산 통계 리포트를 텔레그램으로 자동 전송받을 수 있습니다.")
-        with st.form("update_telegram_form"):
-            current_tg = current_user.get("telegram_chat_id") or ""
-            new_tg_id = st.text_input("텔레그램 Chat ID", value=current_tg, placeholder="예: 123456789")
-            save_tg_btn = st.form_submit_button("텔레그램 ID 저장", use_container_width=True)
-            
-            if save_tg_btn:
-                if update_user_telegram(user_id, new_tg_id):
-                    st.success("텔레그램 Chat ID가 저장되었습니다!")
-                    st.rerun()
-                else:
-                    st.error("텔레그램 ID 저장 실패")
-                    
-        st.info("💡 텔레그램에서 `@userinfobot`을 검색하여 대화를 시작하면 본인의 고유 **Chat ID** 숫자를 바로 확인할 수 있습니다.")
+    st.divider()
+    
+    # 3. 텔레그램 연동 섹션
+    st.markdown("#### 📱 텔레그램 리포트 연동 (4단계 준비)")
+    st.caption("매월 1일 월간 식단 결산 통계 리포트를 텔레그램으로 자동 전송받을 수 있습니다.")
+    with st.form("update_telegram_form"):
+        current_tg = current_user.get("telegram_chat_id") or ""
+        new_tg_id = st.text_input("텔레그램 Chat ID", value=current_tg, placeholder="예: 123456789")
+        save_tg_btn = st.form_submit_button("텔레그램 ID 저장", use_container_width=True)
+        
+        if save_tg_btn:
+            if update_user_telegram(user_id, new_tg_id):
+                st.success("텔레그램 Chat ID가 저장되었습니다!")
+                st.rerun()
+            else:
+                st.error("텔레그램 ID 저장 실패")
+                
+    st.info("💡 텔레그램에서 `@userinfobot`을 검색하여 대화를 시작하면 본인의 고유 **Chat ID** 숫자를 바로 확인할 수 있습니다.")
