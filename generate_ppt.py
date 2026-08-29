@@ -6,32 +6,43 @@ from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 
-# 1. 16:9 와이드스크린 프레젠테이션 생성
+# 1. 16:9 와이드스크린 프레젠테이션 생성 (13.333" x 7.5" / 1920x1080)
 prs = Presentation()
 prs.slide_width = Inches(13.333)
 prs.slide_height = Inches(7.5)
 
-# 2. 통일된 디자인 시스템 토큰
+# 2. Pretendard 단일 폰트 & 엄격한 디자인 시스템 색상 토큰
 FONT_NAME = "Pretendard"
 
-COLOR_BG = RGBColor(248, 250, 252)         # Canvas Light (#F8FAFC)
-COLOR_PARCHMENT = RGBColor(245, 245, 247)  # Canvas Parchment (#F5F5F7)
-COLOR_NAVY = RGBColor(30, 41, 59)           # Canvas Slate Navy (#1E293B)
-COLOR_CARD = RGBColor(255, 255, 255)        # Card White (#FFFFFF)
-COLOR_BORDER = RGBColor(226, 232, 240)      # Border Subtle (#E2E8F0)
-
-COLOR_PRIMARY = RGBColor(0, 102, 204)       # Action Blue (#0066CC)
+# Brand & Accent Colors
+COLOR_PRIMARY = RGBColor(0, 102, 204)       # Primary Action Blue (#0066CC)
+COLOR_FOCUS_BLUE = RGBColor(41, 151, 255)   # Electric Focus Blue (#2997FF)
 COLOR_EMERALD = RGBColor(16, 185, 129)      # Emerald Accent (#10B981)
-COLOR_PURPLE = RGBColor(139, 92, 246)       # Purple Accent (#8B5CF6)
 COLOR_AMBER = RGBColor(245, 158, 11)        # Amber Warning (#F59E0B)
+COLOR_PURPLE = RGBColor(139, 92, 246)       # Purple Flow Node (#8B5CF6)
 
-COLOR_TEXT_MAIN = RGBColor(15, 23, 42)      # Main Ink (#0F172A)
+# Surface Colors
+COLOR_CANVAS_LIGHT = RGBColor(248, 250, 252)      # Canvas Light (#F8FAFC)
+COLOR_CANVAS_PARCHMENT = RGBColor(245, 245, 247)  # Canvas Parchment (#F5F5F7)
+COLOR_CANVAS_DARK = RGBColor(30, 41, 59)          # Canvas Slate Navy (#1E293B)
+COLOR_CARD_WHITE = RGBColor(255, 255, 255)        # Surface Card White (#FFFFFF)
+COLOR_CARD_DARK = RGBColor(39, 39, 42)            # Surface Card Dark (#27272A)
+
+# Text & Ink Colors
+COLOR_INK_MAIN = RGBColor(15, 23, 42)       # Main Heading Ink (#0F172A)
 COLOR_TEXT_BODY = RGBColor(51, 65, 85)      # Body Text (#334155)
-COLOR_TEXT_MUTED = RGBColor(100, 116, 139)  # Muted Text (#64748B)
+COLOR_TEXT_MUTED = RGBColor(100, 116, 139)  # Muted Caption (#64748B)
+COLOR_TEXT_ON_DARK = RGBColor(248, 250, 252) # Text on Dark (#F8FAFC)
+COLOR_TEXT_ON_DARK_MUTED = RGBColor(148, 163, 184) # Muted on Dark (#94A3B8)
+
+# Hairlines & Borders
+COLOR_BORDER_SUBTLE = RGBColor(226, 232, 240) # Border Subtle (#E2E8F0)
+COLOR_BORDER_DARK = RGBColor(51, 65, 85)      # Border Dark Subtle (#334155)
 
 blank_layout = prs.slide_layouts[6]
 
 def set_slide_background(slide, color):
+    """슬라이드 전체 배경색 설정"""
     bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, prs.slide_width, prs.slide_height)
     bg.fill.solid()
     bg.fill.fore_color.rgb = color
@@ -40,12 +51,12 @@ def set_slide_background(slide, color):
 
 def add_fixed_header(slide, category, title, subtitle):
     """
-    모든 슬라이드에 완전히 일치하는 고정 좌표 헤더 렌더링
-    - Category: Left 0.8", Top 0.45", Width 11.73"
-    - Main Title: Left 0.8", Top 0.75", Width 11.73"
-    - Subtitle: Left 0.8", Top 1.20", Width 11.73"
+    디자인 가이드라인에 따른 엄격한 고정 좌표 헤더 렌더링
+    - Chapter Tag: Left 0.8", Top 0.45", Width 11.73", Height 0.30"
+    - Main Title: Left 0.8", Top 0.75", Width 11.73", Height 0.45"
+    - Subtitle: Left 0.8", Top 1.20", Width 11.73", Height 0.35"
     """
-    # 1. 챕터 카테고리 태그
+    # 1. Chapter Category Tracker Tag
     cat_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.45), Inches(11.73), Inches(0.30))
     tf_c = cat_box.text_frame
     tf_c.word_wrap = True
@@ -53,11 +64,11 @@ def add_fixed_header(slide, category, title, subtitle):
     p_c = tf_c.paragraphs[0]
     p_c.text = category.upper()
     p_c.font.name = FONT_NAME
-    p_c.font.size = Pt(10)
+    p_c.font.size = Pt(10.5)
     p_c.font.bold = True
     p_c.font.color.rgb = COLOR_PRIMARY
     
-    # 2. 메인 슬라이드 제목
+    # 2. Main Slide Title
     title_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.75), Inches(11.73), Inches(0.45))
     tf_t = title_box.text_frame
     tf_t.word_wrap = True
@@ -67,9 +78,9 @@ def add_fixed_header(slide, category, title, subtitle):
     p_t.font.name = FONT_NAME
     p_t.font.size = Pt(22)
     p_t.font.bold = True
-    p_t.font.color.rgb = COLOR_NAVY
+    p_t.font.color.rgb = COLOR_INK_MAIN
     
-    # 3. 부제목 / 핵심 요약문
+    # 3. Subtitle / Context Line
     sub_box = slide.shapes.add_textbox(Inches(0.8), Inches(1.20), Inches(11.73), Inches(0.35))
     tf_s = sub_box.text_frame
     tf_s.word_wrap = True
@@ -80,8 +91,8 @@ def add_fixed_header(slide, category, title, subtitle):
     p_s.font.size = Pt(12)
     p_s.font.color.rgb = COLOR_TEXT_MUTED
 
-def add_card(slide, left, top, width, height, title, items, bg_color=COLOR_CARD, border_color=COLOR_BORDER):
-    """표준 컨테이너 카드"""
+def add_card(slide, left, top, width, height, title, items, bg_color=COLOR_CARD_WHITE, border_color=COLOR_BORDER_SUBTLE):
+    """상단 메인 콘텐츠 컨테이너 카드"""
     card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     card.fill.solid()
     card.fill.fore_color.rgb = bg_color
@@ -96,9 +107,9 @@ def add_card(slide, left, top, width, height, title, items, bg_color=COLOR_CARD,
     p_title = tf.paragraphs[0]
     p_title.text = title
     p_title.font.name = FONT_NAME
-    p_title.font.size = Pt(14)
+    p_title.font.size = Pt(14.5)
     p_title.font.bold = True
-    p_title.font.color.rgb = COLOR_NAVY
+    p_title.font.color.rgb = COLOR_INK_MAIN
     p_title.space_after = Pt(8)
     
     for item in items:
@@ -111,7 +122,7 @@ def add_card(slide, left, top, width, height, title, items, bg_color=COLOR_CARD,
     return card
 
 def add_takeaway_strip(slide, left, top, width, height, title, description, accent_color=COLOR_PRIMARY):
-    """하단 밀도 강화를 위한 풀-위드 서머리 스트립"""
+    """하단 레이아웃 밀도 충실화를 위한 풀-위드 테이크어웨이 스트립"""
     strip = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     strip.fill.solid()
     strip.fill.fore_color.rgb = RGBColor(241, 245, 249)
@@ -135,15 +146,15 @@ def add_takeaway_strip(slide, left, top, width, height, title, description, acce
     p2.text = description
     p2.font.name = FONT_NAME
     p2.font.size = Pt(11)
-    p2.font.color.rgb = COLOR_TEXT_MAIN
+    p2.font.color.rgb = COLOR_INK_MAIN
     return strip
 
 def add_metric_card(slide, left, top, width, height, label, value, subtext="", accent_color=COLOR_PRIMARY):
-    """하단 KPI 지표 카드"""
+    """하단 KPI 통계 지표 카드"""
     card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     card.fill.solid()
-    card.fill.fore_color.rgb = COLOR_CARD
-    card.line.color.rgb = COLOR_BORDER
+    card.fill.fore_color.rgb = COLOR_CARD_WHITE
+    card.line.color.rgb = COLOR_BORDER_SUBTLE
     card.line.width = Pt(1.5)
     
     tb = slide.shapes.add_textbox(left + Inches(0.15), top + Inches(0.15), width - Inches(0.3), height - Inches(0.3))
@@ -174,7 +185,7 @@ def add_metric_card(slide, left, top, width, height, label, value, subtext="", a
     return card
 
 def add_node(slide, left, top, width, height, text, subtext="", bg_color=COLOR_PRIMARY, text_color=RGBColor(255, 255, 255)):
-    """LangGraph 노드 박스"""
+    """LangGraph 워크플로우 노드 박스"""
     node = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     node.fill.solid()
     node.fill.fore_color.rgb = bg_color
@@ -201,10 +212,10 @@ def add_node(slide, left, top, width, height, text, subtext="", bg_color=COLOR_P
     return node
 
 # ==========================================
-# Slide 01: 표지 (Cover Slide - Dark Canvas)
+# Slide 01: 표지 (Cover - Canvas Dark #1E293B)
 # ==========================================
 s1 = prs.slides.add_slide(blank_layout)
-set_slide_background(s1, COLOR_NAVY)
+set_slide_background(s1, COLOR_CANVAS_DARK)
 
 dec = s1.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0.8), Inches(1.8), Inches(0.12), Inches(3.6))
 dec.fill.solid()
@@ -217,7 +228,7 @@ tf1.word_wrap = True
 tf1.margin_left = tf1.margin_top = tf1.margin_right = tf1.margin_bottom = 0
 
 p_tag = tf1.paragraphs[0]
-p_tag.text = "AI AGENT & FULL-STACK WELLNESS PROJECT"
+p_tag.text = "AI AGENT & FULL-STACK WELLNESS PLATFORM"
 p_tag.font.name = FONT_NAME
 p_tag.font.size = Pt(12)
 p_tag.font.bold = True
@@ -229,7 +240,7 @@ p_main.text = "🥗 AI 다이어트 & 웰니스 코칭 서비스"
 p_main.font.name = FONT_NAME
 p_main.font.size = Pt(36)
 p_main.font.bold = True
-p_main.font.color.rgb = RGBColor(255, 255, 255)
+p_main.font.color.rgb = COLOR_TEXT_ON_DARK
 p_main.space_after = Pt(14)
 
 p_sub = tf1.add_paragraph()
@@ -243,13 +254,13 @@ p_info = tf1.add_paragraph()
 p_info.text = "발표자 : 메타코드M 라이브 스터디  |  기술 스택 : Gemini Flash · LangGraph · Streamlit · SQLite · Plotly · Telegram"
 p_info.font.name = FONT_NAME
 p_info.font.size = Pt(11.5)
-p_info.font.color.rgb = RGBColor(148, 163, 184)
+p_info.font.color.rgb = COLOR_TEXT_ON_DARK_MUTED
 
 # ==========================================
 # Slide 02: 목차 (Table of Contents)
 # ==========================================
 s2 = prs.slides.add_slide(blank_layout)
-set_slide_background(s2, COLOR_BG)
+set_slide_background(s2, COLOR_CANVAS_LIGHT)
 add_fixed_header(s2, "Table of Contents", "프레젠테이션 목차", "프로젝트 기획부터 AI 아키텍처, 핵심 기능 구현, 강의 연계 성과까지의 체계적 구성")
 
 # 4개 대단원 카드
@@ -286,7 +297,7 @@ add_takeaway_strip(s2, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 03: 기획 배경 및 문제 정의
 # ==========================================
 s3 = prs.slides.add_slide(blank_layout)
-set_slide_background(s3, COLOR_BG)
+set_slide_background(s3, COLOR_CANVAS_LIGHT)
 add_fixed_header(s3, "Problem & Solution", "기획 배경 및 해결하고자 한 핵심 문제", "기존 다이어트 앱의 수동 기록 피로도와 일반 LLM의 환각(Hallucination) 한계를 동시 극복")
 
 add_card(s3, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "⚠️ 기존 다이어트 앱 & LLM의 한계", [
@@ -312,7 +323,7 @@ add_takeaway_strip(s3, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 04: 전체 시스템 구조도
 # ==========================================
 s4 = prs.slides.add_slide(blank_layout)
-set_slide_background(s4, COLOR_BG)
+set_slide_background(s4, COLOR_CANVAS_LIGHT)
 add_fixed_header(s4, "System Architecture", "전체 풀스택 시스템 아키텍처", "클라이언트 UI부터 AI 에이전트 엔진, 로컬 데이터베이스, 외부 메신저 알림까지의 통합 구조")
 
 add_card(s4, Inches(0.8), Inches(1.75), Inches(3.71), Inches(3.4), "🖥️ Frontend (UI/UX)", [
@@ -337,7 +348,7 @@ add_card(s4, Inches(8.82), Inches(1.75), Inches(3.71), Inches(3.4), "💾 Databa
     "정기 스케줄러: scheduler.py 매월 1일 브로드캐스트"
 ])
 
-# 하단 4개 기술 메트릭
+# 하단 4개 기술 메트릭 리본
 add_metric_card(s4, Inches(0.8), Inches(5.35), Inches(2.70), Inches(1.45), "UI Framework", "Streamlit", "반응형 인터랙티브 대시보드", COLOR_PRIMARY)
 add_metric_card(s4, Inches(3.81), Inches(5.35), Inches(2.70), Inches(1.45), "AI Model", "Gemini 3.6 Flash", "3대 전문 도구 바인딩 탑재", COLOR_EMERALD)
 add_metric_card(s4, Inches(6.82), Inches(5.35), Inches(2.70), Inches(1.45), "Storage & Security", "SQLite + Salt", "개인화 식단 및 운동 영속 저장", COLOR_PURPLE)
@@ -347,12 +358,12 @@ add_metric_card(s4, Inches(9.83), Inches(5.35), Inches(2.70), Inches(1.45), "Aut
 # Slide 05: LangGraph 조건부 라우팅 워크플로우
 # ==========================================
 s5 = prs.slides.add_slide(blank_layout)
-set_slide_background(s5, COLOR_BG)
+set_slide_background(s5, COLOR_CANVAS_LIGHT)
 add_fixed_header(s5, "Agent Workflow", "LangGraph 기반 조건부 라우팅(Conditional Routing) 워크플로우", "사용자 입력(사진/텍스트)의 의도를 분석하여 최적의 하위 도구로 자동 분기")
 
 # 상단 Start & Router 노드
 add_node(s5, Inches(5.3), Inches(1.75), Inches(2.73), Inches(0.55), "🏁 __start__", "사용자 입력 수신 (사진/텍스트)", RGBColor(99, 102, 241))
-add_node(s5, Inches(4.8), Inches(2.45), Inches(3.73), Inches(0.65), "🔀 Intent Router (check)", "질문 의도 분류 & 조건부 엣지(Conditional Edge)", COLOR_NAVY)
+add_node(s5, Inches(4.8), Inches(2.45), Inches(3.73), Inches(0.65), "🔀 Intent Router (check)", "질문 의도 분류 & 조건부 엣지(Conditional Edge)", COLOR_INK_MAIN)
 
 # 4개 분기 노드
 add_node(s5, Inches(0.8), Inches(3.30), Inches(2.70), Inches(1.50), "🍱 식단 분석 핸들러\n(food_handler)", "Tool: search_food_nutrition\n식약처 표준 CSV 영양 검색\n<!-- MEAL_DATA --> 생성", COLOR_PRIMARY)
@@ -368,7 +379,7 @@ add_node(s5, Inches(5.3), Inches(6.00), Inches(2.73), Inches(0.55), "🏁 __end_
 # Slide 06: 핵심 기술 ① - 멀티모달 & Function Calling
 # ==========================================
 s6 = prs.slides.add_slide(blank_layout)
-set_slide_background(s6, COLOR_BG)
+set_slide_background(s6, COLOR_CANVAS_LIGHT)
 add_fixed_header(s6, "Core Technology 1", "멀티모달 AI 코치 & Function Calling (Tool Use)", "임의의 추측을 원천 배제하고 식약처 공공데이터만을 기반으로 영양 분석 수행")
 
 add_card(s6, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "💡 Function Calling (도구 바인딩) 메커니즘", [
@@ -395,7 +406,7 @@ add_takeaway_strip(s6, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 07: 핵심 기술 ② - METs 운동 계산 & 영양 RAG & 무중단 폴백
 # ==========================================
 s7 = prs.slides.add_slide(blank_layout)
-set_slide_background(s7, COLOR_BG)
+set_slide_background(s7, COLOR_CANVAS_LIGHT)
 add_fixed_header(s7, "Core Technology 2", "METs 운동 소모 칼로리 & 영양 RAG & 무중단 폴백", "과학적 운동 대사량 산출 공식, 임상 영양 백과 지식 검색, 다중 모델 복원력 구축")
 
 add_card(s7, Inches(0.8), Inches(1.75), Inches(3.71), Inches(3.4), "🏃 METs 운동 소모 칼로리", [
@@ -429,7 +440,7 @@ add_takeaway_strip(s7, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 08: 핵심 기술 ③ - 신체 맞춤 영양 추천 & 보안 DB
 # ==========================================
 s8 = prs.slides.add_slide(blank_layout)
-set_slide_background(s8, COLOR_BG)
+set_slide_background(s8, COLOR_CANVAS_LIGHT)
 add_fixed_header(s8, "Core Technology 3", "신체 정보 기반 맞춤 영양 자동 추천 & 보안 DB", "미플린-세인트지올(Mifflin-St Jeor) 과학적 공식을 통한 개인화 설정")
 
 add_card(s8, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "📏 BMR / TDEE 맞춤 영양 추천 공식", [
@@ -455,7 +466,7 @@ add_takeaway_strip(s8, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 09: 핵심 기능 ④ - Human-in-the-Loop 스마트 자동 저장 & 대시보드
 # ==========================================
 s9 = prs.slides.add_slide(blank_layout)
-set_slide_background(s9, COLOR_BG)
+set_slide_background(s9, COLOR_CANVAS_LIGHT)
 add_fixed_header(s9, "Core Feature 1", "Human-in-the-Loop 스마트 자동 저장 & 통계 대시보드", "AI 분석 결과를 사용자가 원클릭으로 검토 및 저장하고, 실시간 통계 차트로 시각화")
 
 add_card(s9, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🍱 Human-in-the-Loop 스마트 저장 (HIL)", [
@@ -482,7 +493,7 @@ add_metric_card(s9, Inches(9.83), Inches(5.35), Inches(2.70), Inches(1.45), "Mon
 # Slide 10: 핵심 기능 ⑤ - 텔레그램 연동 및 월간 결산 자동화
 # ==========================================
 s10 = prs.slides.add_slide(blank_layout)
-set_slide_background(s10, COLOR_BG)
+set_slide_background(s10, COLOR_CANVAS_LIGHT)
 add_fixed_header(s10, "Core Feature 2", "텔레그램 연동 및 월간 결산 자동화 파이프라인", "앱에 직접 접속하지 않아도 매월 1일 개인 메신저로 한 달 결산 리포트 자동 전달")
 
 add_card(s10, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "📱 텔레그램 리포트 구성 요소", [
@@ -508,7 +519,7 @@ add_takeaway_strip(s10, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 11: 강의 커리큘럼 연계 및 기술적 의의
 # ==========================================
 s11 = prs.slides.add_slide(blank_layout)
-set_slide_background(s11, COLOR_BG)
+set_slide_background(s11, COLOR_CANVAS_LIGHT)
 add_fixed_header(s11, "Course Mapping", "라이브스터디(1~7차시) 커리큘럼 연계 및 기술적 의의", "강의에서 다룬 핵심 이론 및 프레임워크를 실제 동작하는 풀스택 서비스로 완성")
 
 add_card(s11, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "📚 차시별 핵심 이론 접목 내역", [
@@ -535,7 +546,7 @@ add_takeaway_strip(s11, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # Slide 12: 배포 성과 및 향후 발전 로드맵
 # ==========================================
 s12 = prs.slides.add_slide(blank_layout)
-set_slide_background(s12, COLOR_BG)
+set_slide_background(s12, COLOR_CANVAS_LIGHT)
 add_fixed_header(s12, "Summary & Future Work", "서비스 배포 성과 및 향후 발전 로드맵", "글로벌 배포 완료 및 향후 스마트 헬스케어 생태계로의 확장 가능성")
 
 add_card(s12, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🚀 서비스 구현 및 배포 성과", [
@@ -559,4 +570,4 @@ add_takeaway_strip(s12, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # 저장
 output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "AI_Diet_Coach_Presentation.pptx")
 prs.save(output_path)
-print(f"✅ Pretendard 단일 폰트 및 16:9 고정 헤더 디자인 시스템 기반 PPT 12장 생성 완료: {output_path}")
+print(f"✅ 디자인 시스템 기반 완벽한 12장 PPT 생성 완료: {output_path}")
