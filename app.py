@@ -27,6 +27,24 @@ def get_or_create_agent(api_key: str = ""):
     except Exception:
         return None
 
+def send_agent_message_safe(contents) -> str:
+    """구버전 모델 캐시 오류 시 최신 gemini-3.6-flash 모델로 자동 복구하여 호출합니다."""
+    if st.session_state.agent is None:
+        st.session_state.agent = get_or_create_agent()
+    if st.session_state.agent is None:
+        raise ValueError("AI 코치 에이전트가 초기화되지 않았습니다. API 키를 확인해주세요.")
+        
+    try:
+        return st.session_state.agent.send_message(contents)
+    except Exception as e:
+        err_str = str(e)
+        if "404" in err_str or "gemini-2.5-flash" in err_str or "NOT_FOUND" in err_str:
+            # 구버전 세션 캐시 자동 갱신 및 재시도
+            st.session_state.agent = get_or_create_agent()
+            if st.session_state.agent:
+                return st.session_state.agent.send_message(contents)
+        raise e
+
 import importlib
 import db.database as db_module
 importlib.reload(db_module)
@@ -254,7 +272,6 @@ with st.sidebar:
             save_ex_btn = st.form_submit_button("운동 DB 저장", use_container_width=True, type="primary")
             
             if save_ex_btn:
-                # 0이면 METs 자동 계산
                 final_burned = e_cal
                 if final_burned <= 0:
                     from tools.exercise_tool import calculate_exercise_calories
@@ -284,7 +301,7 @@ tab_coach, tab_dashboard, tab_settings = st.tabs([
 ])
 
 # ==========================================
-# 1. AI 식단 코치 대화 탭 (Human-in-the-Loop 자동 저장 연동)
+# 1. AI 식단 코치 대화 탭 (Human-in-the-Loop 스마트 저장 연동)
 # ==========================================
 with tab_coach:
     st.title("🥗 AI 다이어트 & 웰니스 코칭 에이전트")
@@ -334,7 +351,7 @@ with tab_coach:
                     )
                     with st.spinner("사진 속 음식 분석 및 영양 DB 조회 중..."):
                         try:
-                            response_text = st.session_state.agent.send_message([pil_image, prompt_text])
+                            response_text = send_agent_message_safe([pil_image, prompt_text])
                             clean_text, meal_meta, ex_meta = parse_agent_metadata(response_text)
                             st.session_state.messages.append({
                                 "role": "assistant", 
@@ -423,7 +440,7 @@ with tab_coach:
                     "식단 분석 완료 시 <!-- MEAL_DATA: {...} --> 태그를, 운동 계산 완료 시 <!-- EXERCISE_DATA: {...} --> 태그를 마지막 줄에 포함해주세요."
                 )
                 try:
-                    response_text = st.session_state.agent.send_message(context_prompt)
+                    response_text = send_agent_message_safe(context_prompt)
                     clean_text, meal_meta, ex_meta = parse_agent_metadata(response_text)
                     st.markdown(clean_text)
                     st.session_state.messages.append({
@@ -591,8 +608,8 @@ with tab_dashboard:
             # 주간 단백질 추이 차트
             fig_w_pro = go.Figure()
             fig_w_pro.add_trace(go.Bar(
-                x=df_week['day_label'], 
-                y=df_week['protein'], 
+                x=df_week['day_label'],
+                y=df_week['protein'],
                 name="단백질(g)",
                 marker_color='#109618'
             ))
