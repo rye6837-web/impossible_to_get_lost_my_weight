@@ -19,13 +19,13 @@ from app_tools.food_db import search_food_nutrition
 from app_tools.exercise_tool import calculate_exercise_calories
 from app_tools.nutrition_rag import search_nutrition_knowledge
 
-# 2. 다중 모델 폴백(Fallback) 우선순위 리스트 (503/429 발생 시 자동 전환)
+# 2. 다중 모델 폴백(Fallback) 우선순위 리스트 (Flash 계열 위주 구성으로 429 속도제한 방지)
 CANDIDATE_MODELS = [
     "gemini-3.6-flash",
     "gemini-3.7-flash",
     "gemini-3.5-flash",
     "gemini-flash-latest",
-    "gemini-pro-latest"
+    "gemini-2.5-flash-lite"
 ]
 
 def get_api_key() -> str:
