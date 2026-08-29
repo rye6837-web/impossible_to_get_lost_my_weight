@@ -70,6 +70,21 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
         """)
+
+        # 3. 운동 기록 테이블
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS exercise_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                recorded_at TEXT NOT NULL,
+                exercise_name TEXT NOT NULL,
+                duration_min REAL DEFAULT 30.0,
+                calories_burned REAL DEFAULT 0,
+                memo TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        """)
         conn.commit()
 
 def calculate_recommended_nutrition(
@@ -299,29 +314,87 @@ def delete_meal_record(record_id: int, user_id: int) -> bool:
     except Exception:
         return False
 
+# --- [운동 기록 CRUD 함수] ---
+
+def add_exercise_record(
+    user_id: int,
+    exercise_name: str,
+    duration_min: float,
+    calories_burned: float,
+    memo: Optional[str] = None,
+    recorded_at: Optional[str] = None
+) -> Tuple[bool, str]:
+    """운동 기록을 데이터베이스에 추가합니다."""
+    if not exercise_name.strip():
+        return False, "운동명을 입력해주세요."
+    if duration_min <= 0:
+        return False, "운동 시간을 올바르게 입력해주세요."
+        
+    if recorded_at is None:
+        recorded_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO exercise_records (
+                    user_id, recorded_at, exercise_name, duration_min, calories_burned, memo
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, recorded_at, exercise_name.strip(), duration_min, calories_burned, memo))
+            conn.commit()
+            return True, "운동 기록이 성공적으로 저장되었습니다!"
+    except Exception as e:
+        return False, f"운동 기록 저장 실패: {e}"
+
+def delete_exercise_record(record_id: int, user_id: int) -> bool:
+    """특정 운동 기록을 삭제합니다."""
+    try:
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM exercise_records WHERE id = ? AND user_id = ?", (record_id, user_id))
+            conn.commit()
+            return True
+    except Exception:
+        return False
+
 # --- [통계 집계 함수: 일별, 주간별, 월별, 년별] ---
 
 def get_daily_summary(user_id: int, target_date: Optional[str] = None) -> Dict[str, Any]:
-    """특정 날짜(YYYY-MM-DD)의 식단 목록과 영양소 합계를 집계합니다."""
+    """특정 날짜(YYYY-MM-DD)의 식단 및 운동 목록과 순 칼로리 합계를 집계합니다."""
     if target_date is None:
         target_date = date.today().strftime("%Y-%m-%d")
         
     with get_connection() as conn:
         cursor = conn.cursor()
+        
+        # 1. 식단 조회
         cursor.execute("""
             SELECT * FROM meal_records
             WHERE user_id = ? AND substr(recorded_at, 1, 10) = ?
             ORDER BY recorded_at ASC
         """, (user_id, target_date))
         rows = cursor.fetchall()
-        
         records = [dict(row) for row in rows]
+        
+        # 2. 운동 조회
+        cursor.execute("""
+            SELECT * FROM exercise_records
+            WHERE user_id = ? AND substr(recorded_at, 1, 10) = ?
+            ORDER BY recorded_at ASC
+        """, (user_id, target_date))
+        ex_rows = cursor.fetchall()
+        ex_records = [dict(row) for row in ex_rows]
+        
         total_cal = sum(r["calories"] for r in records)
         total_carbs = sum(r["carbs"] for r in records)
         total_protein = sum(r["protein"] for r in records)
         total_fat = sum(r["fat"] for r in records)
         total_sugar = sum(r["sugar"] for r in records)
         total_sodium = sum(r["sodium"] for r in records)
+        
+        total_burned = sum(e["calories_burned"] for e in ex_records)
+        total_ex_min = sum(e["duration_min"] for e in ex_records)
+        net_cal = total_cal - total_burned
         
         return {
             "date": target_date,
@@ -332,7 +405,12 @@ def get_daily_summary(user_id: int, target_date: Optional[str] = None) -> Dict[s
             "total_protein": round(total_protein, 1),
             "total_fat": round(total_fat, 1),
             "total_sugar": round(total_sugar, 1),
-            "total_sodium": round(total_sodium, 1)
+            "total_sodium": round(total_sodium, 1),
+            "exercise_records": ex_records,
+            "exercise_count": len(ex_records),
+            "total_burned": round(total_burned, 1),
+            "total_ex_min": round(total_ex_min, 1),
+            "net_cal": round(net_cal, 1)
         }
 
 def get_weekly_summary(user_id: int, end_date_str: Optional[str] = None) -> Dict[str, Any]:
