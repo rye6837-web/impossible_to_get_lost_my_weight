@@ -1,3 +1,3 @@
-from tools.tools import search_food_nutrition
+from tools.food_db import search_food_nutrition
 from tools.exercise_tool import calculate_exercise_calories
 from tools.nutrition_rag import search_nutrition_knowledge

@@ -9,16 +9,10 @@ import pandas as pd
 
 # 1. 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-AGENT_DIR = os.path.join(BASE_DIR, 'agent')
-TOOLS_DIR = os.path.join(BASE_DIR, 'tools')
-DB_DIR = os.path.join(BASE_DIR, 'db')
-SERVICES_DIR = os.path.join(BASE_DIR, 'services')
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
-for p in [BASE_DIR, AGENT_DIR, TOOLS_DIR, DB_DIR, SERVICES_DIR]:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-
-from agent import create_diet_agent, parse_agent_metadata
+from agent.agent import create_diet_agent, parse_agent_metadata
 from services.telegram_service import send_telegram_monthly_report, send_telegram_message, get_telegram_bot_token
 
 def get_or_create_agent(api_key: str = ""):

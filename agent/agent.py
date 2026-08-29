@@ -10,14 +10,11 @@ from typing import Optional, Dict, Any, Tuple
 # 1. 모듈 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
-TOOLS_DIR = os.path.join(PROJECT_DIR, 'tools')
 
-if TOOLS_DIR not in sys.path:
-    sys.path.append(TOOLS_DIR)
 if PROJECT_DIR not in sys.path:
-    sys.path.append(PROJECT_DIR)
+    sys.path.insert(0, PROJECT_DIR)
 
-from tools.tools import search_food_nutrition
+from tools.food_db import search_food_nutrition
 from tools.exercise_tool import calculate_exercise_calories
 from tools.nutrition_rag import search_nutrition_knowledge
 
