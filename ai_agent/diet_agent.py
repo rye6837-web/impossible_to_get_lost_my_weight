@@ -2,10 +2,11 @@ import os
 import sys
 import json
 import re
+import time
 import streamlit as st
 from google import genai
 from google.genai import types
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, List
 
 # 1. 모듈 경로 설정
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +19,15 @@ from app_tools.food_db import search_food_nutrition
 from app_tools.exercise_tool import calculate_exercise_calories
 from app_tools.nutrition_rag import search_nutrition_knowledge
 
+# 2. 다중 모델 폴백(Fallback) 우선순위 리스트 (503/429 발생 시 자동 전환)
+CANDIDATE_MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-pro-latest"
+]
+
 def get_api_key() -> str:
     """Gemini API 키를 여러 소스에서 순차적으로 탐색합니다."""
     if "GEMINI_API_KEY" in st.session_state and st.session_state["GEMINI_API_KEY"]:
@@ -29,7 +39,7 @@ def get_api_key() -> str:
         pass
     return os.getenv("GEMINI_API_KEY", "")
 
-# 3. 에이전트 시스템 프롬프트 (3대 도구 및 스마트 메타데이터 태깅)
+# 3. 에이전트 시스템 프롬프트
 SYSTEM_INSTRUCTION = """
 당신은 전문적이고 친절한 'AI 다이어트 & 종합 웰니스 코치 에이전트'입니다.
 
@@ -57,8 +67,14 @@ class DietAgent:
             raise ValueError("GEMINI_API_KEY가 설정되지 않았습니다. API 키를 입력하거나 .streamlit/secrets.toml에 등록해주세요.")
         
         self.client = genai.Client(api_key=self.api_key)
+        self.current_model_idx = 0
+        self._init_chat(CANDIDATE_MODELS[self.current_model_idx])
+
+    def _init_chat(self, model_name: str):
+        """특정 모델명으로 대화 세션을 생성합니다."""
+        self.active_model = model_name
         self.chat = self.client.chats.create(
-            model="gemini-3.6-flash",
+            model=model_name,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 tools=[
@@ -71,10 +87,33 @@ class DietAgent:
 
     def send_message(self, contents) -> str:
         """
-        contents: 텍스트 문자열 또는 [이미지 객체, 텍스트] 형태 모두 지원
+        다중 모델 폴백(Fallback) 기능이 내장된 메시지 전송 메서드.
+        503(과부하), 429(속도제한) 발생 시 순차적으로 예비 모델로 자동 전환하여 재시도합니다.
         """
-        response = self.chat.send_message(contents)
-        return response.text
+        last_error = None
+        
+        for idx in range(len(CANDIDATE_MODELS)):
+            model_to_try = CANDIDATE_MODELS[(self.current_model_idx + idx) % len(CANDIDATE_MODELS)]
+            
+            if self.active_model != model_to_try:
+                try:
+                    self._init_chat(model_to_try)
+                except Exception as init_err:
+                    continue
+                    
+            try:
+                response = self.chat.send_message(contents)
+                if response and response.text:
+                    self.current_model_idx = (self.current_model_idx + idx) % len(CANDIDATE_MODELS)
+                    return response.text
+            except Exception as e:
+                err_msg = str(e)
+                last_error = e
+                print(f"⚠️ [{model_to_try}] 일시적 과부하/오류 ({err_msg[:60]}...) -> 예비 모델로 자동 전환합니다.")
+                time.sleep(0.5)
+                continue
+                
+        raise last_error or RuntimeError("모든 예비 Gemini 모델의 응답에 실패했습니다. 잠시 후 다시 시도해주세요.")
 
 def parse_agent_metadata(response_text: str) -> Tuple[str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """
@@ -108,12 +147,13 @@ def create_diet_agent(api_key: str = ""):
     return DietAgent(api_key=api_key)
 
 if __name__ == "__main__":
-    print("🤖 3대 전문 도구 탑재 AI 다이어트 코치 테스트 중...")
+    print("🤖 다중 모델 자동 폴백(Fallback) 탑재 에이전트 테스트 중...")
     try:
         agent = create_diet_agent()
-        resp = agent.send_message("오늘 점심에 닭가슴살 샐러드 먹었어")
+        resp = agent.send_message("오늘 점심 식단으로 닭가슴살 100g이랑 사과 먹었어")
         clean, meal, ex = parse_agent_metadata(resp)
+        print("\n[성공한 활성 모델]:", agent.active_model)
         print("\n[클린 응답]:\n", clean)
-        print("\n[추출된 식단 메타데이터]:\n", meal)
+        print("\n[추출된 식단]:", meal)
     except Exception as e:
         print(f"\n❌ 실행 오류: {e}")
