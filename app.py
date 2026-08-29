@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from agent.diet_agent import create_diet_agent, parse_agent_metadata
+from ai_agent.diet_agent import create_diet_agent, parse_agent_metadata
 from services.telegram_service import send_telegram_monthly_report, send_telegram_message, get_telegram_bot_token
 
 def get_or_create_agent(api_key: str = ""):
