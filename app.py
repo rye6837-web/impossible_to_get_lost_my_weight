@@ -13,7 +13,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from ai_agent.diet_agent import create_diet_agent, parse_agent_metadata
-from services.telegram_service import send_telegram_monthly_report, send_telegram_message, get_telegram_bot_token
+from app_services.telegram_service import send_telegram_monthly_report, send_telegram_message, get_telegram_bot_token
 
 def get_or_create_agent(api_key: str = ""):
     try:
@@ -40,7 +40,7 @@ def send_agent_message_safe(contents) -> str:
         raise e
 
 import importlib
-import db.database as db_module
+import app_db.database as db_module
 importlib.reload(db_module)
 
 register_user = db_module.register_user
@@ -268,7 +268,7 @@ with st.sidebar:
             if save_ex_btn:
                 final_burned = e_cal
                 if final_burned <= 0:
-                    from tools.exercise_tool import calculate_exercise_calories
+                    from app_tools.exercise_tool import calculate_exercise_calories
                     res = calculate_exercise_calories(e_name, e_min, user_weight)
                     final_burned = res.get("소모칼로리(kcal)", 150.0)
                     

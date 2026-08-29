@@ -7,8 +7,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from db.database import get_connection
-from services.telegram_service import send_telegram_monthly_report
+from app_db.database import get_connection
+from app_services.telegram_service import send_telegram_monthly_report
 
 def run_monthly_broadcast():
     """모든 텔레그램 연동 사용자에게 지난달 결산 리포트를 발송합니다."""

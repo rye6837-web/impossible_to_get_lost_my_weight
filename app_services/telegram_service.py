@@ -8,7 +8,7 @@ matplotlib.use('Agg')  # GUI 없는 백엔드 사용
 from datetime import datetime
 from typing import Optional, Tuple, Dict, Any
 
-from db.database import get_user_by_id, get_monthly_summary
+from app_db.database import get_user_by_id, get_monthly_summary
 
 def get_telegram_bot_token() -> str:
     """텔레그램 봇 토큰을 검색합니다."""

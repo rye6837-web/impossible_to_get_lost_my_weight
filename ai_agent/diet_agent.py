@@ -14,9 +14,9 @@ PROJECT_DIR = os.path.abspath(os.path.join(BASE_DIR, '..'))
 if PROJECT_DIR not in sys.path:
     sys.path.insert(0, PROJECT_DIR)
 
-from tools.food_db import search_food_nutrition
-from tools.exercise_tool import calculate_exercise_calories
-from tools.nutrition_rag import search_nutrition_knowledge
+from app_tools.food_db import search_food_nutrition
+from app_tools.exercise_tool import calculate_exercise_calories
+from app_tools.nutrition_rag import search_nutrition_knowledge
 
 def get_api_key() -> str:
     """Gemini API 키를 여러 소스에서 순차적으로 탐색합니다."""
