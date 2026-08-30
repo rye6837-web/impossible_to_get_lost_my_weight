@@ -342,7 +342,8 @@ add_code_card(s4, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 2:
     "  intent_router -.-> rag_handler & general_handler;",
     "  food_handler & exercise_handler --> self_rag_evaluator;",
     "  rag_handler & general_handler --> self_rag_evaluator;",
-    "  self_rag_evaluator --> human_in_the_loop;",
+    "  self_rag_evaluator -.->|합격: passed| human_in_the_loop;",
+    "  self_rag_evaluator ==>|불합격: retry 되돌아감| intent_router;",
     "  human_in_the_loop --> __end__;",
     "```"
 ], header_color=COLOR_CODE_CYAN)
