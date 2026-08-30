@@ -12,8 +12,8 @@ notebook = {
                 "> **목적**: 7차시 `Project_Example.ipynb`와 동일한 방식으로, LangGraph 상태 그래프 시각화 ➔ 식약처 DB 검색 ➔ METs 운동 계산 ➔ 영양 RAG ➔ 5대 Flash 모델 자동 폴백 ➔ Self-RAG 품질 검증 ➔ SQLite DB 연동까지 전 과정을 단계별로 직접 실행하고 검증합니다.\n",
                 "\n",
                 "**주요 검증 항목:**\n",
-                "1. **환경 설정 & API 키 로드**\n",
-                "2. **[LangGraph 워크플로우 그래프 정의 & 시각화]** `get_graph()`, Mermaid 및 ASCII 다이어그램\n",
+                "1. **필수 라이브러리 설치 & API 키 로드**\n",
+                "2. **[LangGraph 워크플로우 정의 & 시각화]** `get_graph()`, Mermaid 및 ASCII 다이어그램\n",
                 "3. **[Tool 1] 식약처 표준 영양 CSV DB 검색기 (`search_food_nutrition`)**\n",
                 "4. **[Tool 2] ACSM 표준 METs 운동 소모 칼로리 계산기 (`calculate_exercise_calories`)**\n",
                 "5. **[Tool 3] 다이어트 & 임상 영양 백과 RAG 검색기 (`search_nutrition_knowledge`)**\n",
@@ -27,7 +27,7 @@ notebook = {
             "cell_type": "markdown",
             "metadata": {},
             "source": [
-                "## 1. 환경 설정 및 API 키 확인"
+                "## 1. 필수 라이브러리 설치 및 환경 설정"
             ]
         },
         {
@@ -36,6 +36,9 @@ notebook = {
             "metadata": {},
             "outputs": [],
             "source": [
+                "# 1. 필수 패키지 자동 설치 (최초 1회 실행)\n",
+                "%pip install -q -U langgraph langchain-core google-genai pandas\n",
+                "\n",
                 "import os\n",
                 "import sys\n",
                 "import json\n",
@@ -447,4 +450,4 @@ output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Diet_Age
 with open(output_path, "w", encoding="utf-8") as f:
     json.dump(notebook, f, indent=2, ensure_ascii=False)
 
-print(f"✅ LangGraph 시각화 코드가 추가된 주피터 노트북 생성 완료: {output_path}")
+print(f"✅ %pip 패키지 자동 설치가 추가된 주피터 노트북 생성 완료: {output_path}")
