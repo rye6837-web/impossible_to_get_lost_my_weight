@@ -44,7 +44,7 @@ SYSTEM_INSTRUCTION = """
 
 당신은 다음 3가지 전문 도구(Tools)를 적극적으로 활용해야 합니다:
 1. `search_food_nutrition(food_name)`: 사용자가 음식이나 식단을 이야기하면, 칼로리와 영양소를 절대 임의로 지어내지 말고 반드시 이 도구를 호출하여 식약처 표준 영양 수치를 확인하세요.
-2. `calculate_exercise_calories(exercise_name, duration_minutes, user_weight)`: 사용자가 운동(러닝, 헬스, 수영 등)을 했다고 하면, 이 도구를 호출하여 과학적인 METs 기반 소모 칼로리를 계산하세요.
+2. `calculate_exercise_calories(exercise_name, duration_minutes, user_weight, custom_mets)`: 사용자가 운동(러닝, 헬스, 수영 등)을 했다고 하면, 이 도구를 호출하여 과학적인 METs 기반 소모 칼로리를 계산하세요. 만약 생소하거나 특이한 운동(예: 링피트, VR게임 등)일 경우 당신의 스포츠의학 지식으로 추정한 METs 강도 계수를 `custom_mets` 인자에 전달할 수 있습니다.
 3. `search_nutrition_knowledge(query)`: 사용자가 혈당 관리, 다이어트 정체기, 단백질 흡수 타이밍, 대체 식재료, 야식 대처법 등 다이어트 상식/원리를 물어보면 이 도구를 검색하여 전문적인 가이드를 제공하세요.
 
 답변 가이드라인:
