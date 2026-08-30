@@ -19,13 +19,12 @@ from app_tools.food_db import search_food_nutrition
 from app_tools.exercise_tool import calculate_exercise_calories
 from app_tools.nutrition_rag import search_nutrition_knowledge
 
-# 2. 다중 모델 폴백(Fallback) 우선순위 리스트 (Flash 계열 위주 구성으로 429 속도제한 방지)
+# 2. 다중 모델 폴백(Fallback) 우선순위 리스트 (gemini-3.5-flash-lite 1순위 구성)
 CANDIDATE_MODELS = [
+    "gemini-3.5-flash-lite",
     "gemini-3.6-flash",
     "gemini-3.7-flash",
-    "gemini-3.5-flash",
-    "gemini-flash-latest",
-    "gemini-2.5-flash-lite"
+    "gemini-3.5-flash"
 ]
 
 def get_api_key() -> str:
@@ -110,7 +109,7 @@ class DietAgent:
                 err_msg = str(e)
                 last_error = e
                 print(f"⚠️ [{model_to_try}] 일시적 과부하/오류 ({err_msg[:60]}...) -> 예비 모델로 자동 전환합니다.")
-                time.sleep(0.5)
+                time.sleep(1.5)
                 continue
                 
         raise last_error or RuntimeError("모든 예비 Gemini 모델의 응답에 실패했습니다. 잠시 후 다시 시도해주세요.")
