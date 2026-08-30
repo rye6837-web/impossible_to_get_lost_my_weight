@@ -148,7 +148,7 @@ def add_code_card(slide, left, top, width, height, title, code_snippets, header_
             p.font.color.rgb = COLOR_TEXT_ON_DARK_MUTED
         elif "503" in line or "429" in line or "404" in line or "오류" in line or "UNAVAILABLE" in line or "❌" in line or "⚠️" in line:
             p.font.color.rgb = COLOR_CODE_RED
-        elif "True" in line or "200" in line or "성공" in line or "✅" in line or "정상" in line or "passed" in line:
+        elif "True" in line or "200" in line or "성공" in line or "✅" in line or "정상" in line or "passed" in line or "true" in line:
             p.font.color.rgb = COLOR_CODE_GREEN
         elif "Gate" in line or "Score" in line or "├──" in line or "└──" in line or "자동 전환" in line or "graph TD" in line:
             p.font.color.rgb = COLOR_CODE_YELLOW
@@ -315,7 +315,6 @@ add_card(s3, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🖥️ 클�
     "📱 텔레그램 월간 결산: 매월 1일 자정 통계 & 그래프 자동 전송"
 ])
 
-# 우측 4개 핵심 메트릭 카드
 add_metric_card(s3, Inches(6.81), Inches(1.75), Inches(2.70), Inches(1.60), "웹 프레임워크", "Streamlit", "반응형 인터랙티브 웹 UI", COLOR_PRIMARY)
 add_metric_card(s3, Inches(9.83), Inches(1.75), Inches(2.70), Inches(1.60), "인공지능 모델", "Gemini Flash", "초고속 멀티모달 & 도구 바인딩", COLOR_EMERALD)
 add_metric_card(s3, Inches(6.81), Inches(3.55), Inches(2.70), Inches(1.60), "데이터베이스", "SQLite + Salt", "SHA-256 개인화 암호화 격리", COLOR_PURPLE)
@@ -327,21 +326,14 @@ add_takeaway_strip(s3, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 )
 
 # ==========================================
-# Slide 04: [Cell 2] LangGraph 상태 그래프 시각화
+# Slide 04: [Cell 2] LangGraph 상태 그래프 시각화 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s4 = prs.slides.add_slide(blank_layout)
 set_slide_background(s4, COLOR_CANVAS_LIGHT)
 add_fixed_header(s4, "Notebook Cell 2", "[Cell 2] LangGraph 상태 그래프 정의 & Mermaid 시각화", "compiled_agent.get_graph().draw_mermaid() 기반의 조건부 라우팅 워크플로우 실증")
 
-add_card(s4, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🔀 상태 그래프(StateGraph) 구조", [
-    "State 스키마: `question`, `intent`, `tool_results`, `quality_score`",
-    "START ➔ `intent_router`: 질문 의도 4대 조건부 분기",
-    "4대 핸들러: `food`, `exercise`, `rag`, `general`",
-    "품질 평가: 4대 핸들러 ➔ `self_rag_evaluator` (3단계 검증)",
-    "스마트 저장: `human_in_the_loop` ➔ END (DB 저장)"
-])
-
-add_code_card(s4, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 2: get_graph().draw_mermaid() Output", [
+# [좌측: 셀 실행 결과]
+add_code_card(s4, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 2: get_graph().draw_mermaid() Output", [
     "# [LangGraph 상태 그래프 Mermaid 출력]",
     "```mermaid",
     "graph TD;",
@@ -355,26 +347,29 @@ add_code_card(s4, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 2
     "```"
 ], header_color=COLOR_CODE_CYAN)
 
+# [우측: 핵심 원리 설명]
+add_card(s4, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🔀 상태 그래프(StateGraph) 구조", [
+    "State 스키마: `question`, `intent`, `tool_results`, `quality_score`",
+    "START ➔ `intent_router`: 질문 의도 4대 조건부 분기",
+    "4대 핸들러: `food`, `exercise`, `rag`, `general`",
+    "품질 평가: 4대 핸들러 ➔ `self_rag_evaluator` (3단계 검증)",
+    "스마트 저장: `human_in_the_loop` ➔ END (DB 저장)"
+])
+
 add_takeaway_strip(s4, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "조건부 라우팅 검증 (Routing Verification)",
     "LangGraph 상태 그래프를 통해 사용자 입력 의도에 맞춰 전문 도구로 분기하고 품질 검증을 거치는 제어 흐름을 실증했습니다."
 )
 
 # ==========================================
-# Slide 05: [Cell 3] Tool 1 검증: 식약처 영양 DB 검색
+# Slide 05: [Cell 3] Tool 1 검증: 식약처 영양 DB 검색 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s5 = prs.slides.add_slide(blank_layout)
 set_slide_background(s5, COLOR_CANVAS_LIGHT)
 add_fixed_header(s5, "Notebook Cell 3", "[Cell 3] Tool 1 검증 : 식약처 표준 영양 CSV DB 검색", "search_food_nutrition() 함수를 통한 5,000+ 공공데이터 실측 영양 수치 반환")
 
-add_card(s5, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🔍 Tool 1 작동 원리 & 검증 포인트", [
-    "공공데이터 연동: 식약처 5,000+ 식품 표준 영양 CSV 탑재",
-    "키워드 매칭 로직: 사용자가 입력한 대표 음식명 자동 탐색",
-    "추출 영양 성분: 칼로리, 탄수화물, 단백질, 지방, 당류, 나트륨",
-    "환각율 0%: LLM 임의 추측을 배제하고 CSV 실측치만 반환"
-])
-
-add_code_card(s5, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 3: search_food_nutrition('닭가슴살')", [
+# [좌측: 셀 실행 결과]
+add_code_card(s5, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 3: search_food_nutrition('닭가슴살')", [
     "# [입력]: food_name = '닭가슴살'",
     "# [식약처 CSV DB 실측 반환 JSON]:",
     "{",
@@ -387,26 +382,28 @@ add_code_card(s5, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 3
     "# Status: ✅ 100% 실측 영양 데이터 반환 성공"
 ], header_color=COLOR_CODE_GREEN)
 
+# [우측: 핵심 원리 설명]
+add_card(s5, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🔍 Tool 1 작동 원리 & 검증 포인트", [
+    "공공데이터 연동: 식약처 5,000+ 식품 표준 영양 CSV 탑재",
+    "키워드 매칭 로직: 사용자가 입력한 대표 음식명 자동 탐색",
+    "추출 영양 성분: 칼로리, 탄수화물, 단백질, 지방, 당류, 나트륨",
+    "환각율 0%: LLM 임의 추측을 배제하고 CSV 실측치만 반환"
+])
+
 add_takeaway_strip(s5, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "100% 공공데이터 기반 신뢰성 (Zero-Hallucination Verified)",
     "LLM이 수치를 추측하지 않고 파이썬 함수가 공공데이터 실측치(135kcal, 단백질 26g)를 조회하여 반환합니다."
 )
 
 # ==========================================
-# Slide 06: [Cell 4] Tool 2 검증: ACSM METs 운동 계산
+# Slide 06: [Cell 4] Tool 2 검증: ACSM METs 운동 계산 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s6 = prs.slides.add_slide(blank_layout)
 set_slide_background(s6, COLOR_CANVAS_LIGHT)
 add_fixed_header(s6, "Notebook Cell 4", "[Cell 4] Tool 2 검증 : ACSM METs 운동 소모 계산기", "calculate_exercise_calories() 함수를 통한 과학적 운동 대사량 산출")
 
-add_card(s6, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🏃 Tool 2 작동 원리 & 검증 포인트", [
-    "ACSM 공식: `소모 칼로리 = 1.05 × METs × 체중(kg) × 시간(hr)`",
-    "20+ 운동 계수 DB: 러닝(8.5), 웨이트(5.5), 수영(7.0), 줄넘기(10.0)",
-    "체중 연동: 사용자별 체중(kg) 자동 반영 맞춤 계산",
-    "순 칼로리(Net Calories) 연동: 섭취량 - 운동 소모량"
-])
-
-add_code_card(s6, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 4: calculate_exercise_calories('러닝')", [
+# [좌측: 셀 실행 결과]
+add_code_card(s6, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 4: calculate_exercise_calories('러닝')", [
     "# [입력]: exercise='러닝', duration=30분, weight=70kg",
     "# [ACSM 공식 계산 실측 반환 JSON]:",
     "{",
@@ -418,26 +415,28 @@ add_code_card(s6, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 4
     "}"
 ], header_color=COLOR_CODE_GREEN)
 
+# [우측: 핵심 원리 설명]
+add_card(s6, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🏃 Tool 2 작동 원리 & 검증 포인트", [
+    "ACSM 공식: `소모 칼로리 = 1.05 × METs × 체중(kg) × 시간(hr)`",
+    "20+ 운동 계수 DB: 러닝(8.5), 웨이트(5.5), 수영(7.0), 줄넘기(10.0)",
+    "체중 연동: 사용자별 체중(kg) 자동 반영 맞춤 계산",
+    "순 칼로리(Net Calories) 연동: 섭취량 - 운동 소모량"
+])
+
 add_takeaway_strip(s6, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "과학적 대사량 관리 (Scientific Energy Expenditure)",
     "미국 스포츠의학회(ACSM) 공식에 체중과 운동 시간을 연동하여 정밀한 소모 칼로리를 산출합니다."
 )
 
 # ==========================================
-# Slide 07: [Cell 5] Tool 3 검증: 영양 백과 RAG 검색
+# Slide 07: [Cell 5] Tool 3 검증: 영양 백과 RAG 검색 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s7 = prs.slides.add_slide(blank_layout)
 set_slide_background(s7, COLOR_CANVAS_LIGHT)
 add_fixed_header(s7, "Notebook Cell 5", "[Cell 5] Tool 3 검증 : 다이어트 & 영양 백과 RAG 검색", "search_nutrition_knowledge() 함수를 통한 임상 영양 전문 지식 탐색")
 
-add_card(s7, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "📚 Tool 3 작동 원리 & 검증 포인트", [
-    "영양 백과 RAG: 전문 임상 영양 지식 베이스 구축",
-    "혈당 스파이크 방지: [식이섬유 ➔ 단백질 ➔ 탄수화물] 식사순서",
-    "정체기 극복 가이드: 대사 적응 극복을 위한 리피드(Refeed) 전략",
-    "단백질 흡수 타이밍: 운동 직후 근합성을 위한 영양 보충 팁"
-])
-
-add_code_card(s7, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 5: search_nutrition_knowledge('혈당')", [
+# [좌측: 셀 실행 결과]
+add_code_card(s7, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 5: search_nutrition_knowledge('혈당')", [
     "# [입력]: query = '혈당 스파이크 방지'",
     "# [영양 RAG 지식 검색 실측 반환 JSON]:",
     "{",
@@ -448,26 +447,28 @@ add_code_card(s7, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 5
     "}"
 ], header_color=COLOR_CODE_GREEN)
 
+# [우측: 핵심 원리 설명]
+add_card(s7, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "📚 Tool 3 작동 원리 & 검증 포인트", [
+    "영양 백과 RAG: 전문 임상 영양 지식 베이스 구축",
+    "혈당 스파이크 방지: [식이섬유 ➔ 단백질 ➔ 탄수화물] 식사순서",
+    "정체기 극복 가이드: 대사 적응 극복을 위한 리피드(Refeed) 전략",
+    "단백질 흡수 타이밍: 운동 직후 근합성을 위한 영양 보충 팁"
+])
+
 add_takeaway_strip(s7, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "임상 영양 가이드 (Clinical Nutrition RAG)",
     "단순 수치 계산을 넘어 혈당 관리 및 정체기 극복을 위한 전문 임상 영양 가이드를 과학적으로 제공합니다."
 )
 
 # ==========================================
-# Slide 08: [Cell 7] 식단 분석 및 MEAL_DATA 태깅
+# Slide 08: [Cell 7] 식단 분석 및 MEAL_DATA 태깅 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s8 = prs.slides.add_slide(blank_layout)
 set_slide_background(s8, COLOR_CANVAS_LIGHT)
 add_fixed_header(s8, "Notebook Cell 7", "[Cell 7] 식단 분석 & MEAL_DATA 메타데이터 태깅 실측", "AI 코칭 답변 생성과 동시에 구조화된 MEAL_DATA JSON 자동 추출 검증")
 
-add_card(s8, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🏷️ Human-in-the-Loop 메타데이터 태깅", [
-    "3단계 프롬프트: ① 영양소 요약 ➔ ② 목표 대비 진단 ➔ ③ 메뉴 제안",
-    "메타데이터 생성: `<!-- MEAL_DATA: {...} -->` 한 줄 태깅",
-    "정규식 파서: `parse_agent_metadata()`로 텍스트와 JSON 분리",
-    "스마트 컨펌 카드: UI 하단에 즉시 렌더링되어 원클릭 DB 저장"
-])
-
-add_code_card(s8, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 7: parse_agent_metadata() Output", [
+# [좌측: 셀 실행 결과]
+add_code_card(s8, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 7: parse_agent_metadata() Output", [
     "# [추출된 식단 메타데이터 (MEAL_DATA)]:",
     "{",
     "  'food_name': '닭가슴살과 사과',",
@@ -478,26 +479,28 @@ add_code_card(s8, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 7
     "# [호출 성공 모델]: gemini-3.5-flash-lite (1초 만에 완료)"
 ], header_color=COLOR_CODE_CYAN)
 
+# [우측: 핵심 원리 설명]
+add_card(s8, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🏷️ Human-in-the-Loop 메타데이터 태깅", [
+    "3단계 프롬프트: ① 영양소 요약 ➔ ② 목표 대비 진단 ➔ ③ 메뉴 제안",
+    "메타데이터 생성: `<!-- MEAL_DATA: {...} -->` 한 줄 태깅",
+    "정규식 파서: `parse_agent_metadata()`로 텍스트와 JSON 분리",
+    "스마트 컨펌 카드: UI 하단에 즉시 렌더링되어 원클릭 DB 저장"
+])
+
 add_takeaway_strip(s8, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "정형 데이터 자동 추출 (Structured Data Extraction)",
     "자연어 답변에서 정형 JSON 데이터를 완벽히 분리하여 사용자의 원클릭 DB 저장을 지원합니다."
 )
 
 # ==========================================
-# Slide 09: [Cell 8] 운동 기록 및 EXERCISE_DATA 태깅
+# Slide 09: [Cell 8] 운동 기록 및 EXERCISE_DATA 태깅 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s9 = prs.slides.add_slide(blank_layout)
 set_slide_background(s9, COLOR_CANVAS_LIGHT)
 add_fixed_header(s9, "Notebook Cell 8", "[Cell 8] 운동 기록 & EXERCISE_DATA 메타데이터 태깅 실측", "운동 내용 인식 후 소모 칼로리 계산 및 EXERCISE_DATA JSON 자동 추출 검증")
 
-add_card(s9, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🏃 운동 기록 파싱 & 연동 메커니즘", [
-    "자연어 운동 인식: '러닝 30분 뛰었어' ➔ 운동명/시간 추출",
-    "METs 계산기 바인딩: 체중 70kg 기준 소모 칼로리 자동 계산",
-    "메타데이터 생성: `<!-- EXERCISE_DATA: {...} -->` 태깅",
-    "순 칼로리 차감: DB 저장 시 당일 섭취 칼로리에서 즉시 차감"
-])
-
-add_code_card(s9, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 8: parse_agent_metadata() Output", [
+# [좌측: 셀 실행 결과]
+add_code_card(s9, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 8: parse_agent_metadata() Output", [
     "# [입력]: '오늘 저녁에 야외 러닝 30분 뛰었어. 몸무게 70kg'",
     "# [추출된 운동 메타데이터 (EXERCISE_DATA)]:",
     "{",
@@ -508,25 +511,28 @@ add_code_card(s9, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 8
     "# Status: ✅ 운동 메타데이터 추출 & DB 저장 연동 준비 완료"
 ], header_color=COLOR_CODE_CYAN)
 
+# [우측: 핵심 원리 설명]
+add_card(s9, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🏃 운동 기록 파싱 & 연동 메커니즘", [
+    "자연어 운동 인식: '러닝 30분 뛰었어' ➔ 운동명/시간 추출",
+    "METs 계산기 바인딩: 체중 70kg 기준 소모 칼로리 자동 계산",
+    "메타데이터 생성: `<!-- EXERCISE_DATA: {...} -->` 태깅",
+    "순 칼로리 차감: DB 저장 시 당일 섭취 칼로리에서 즉시 차감"
+])
+
 add_takeaway_strip(s9, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "운동 데이터 파이프라인 (Exercise Data Pipeline)",
     "자연어 운동 입력을 구조화 데이터로 변환하여 실시간 소모 칼로리를 대시보드에 즉각 반영합니다."
 )
 
 # ==========================================
-# Slide 10: [Cell 9] Self-RAG 3단계 품질 게이트
+# Slide 10: [Cell 9] Self-RAG 3단계 품질 게이트 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s10 = prs.slides.add_slide(blank_layout)
 set_slide_background(s10, COLOR_CANVAS_LIGHT)
 add_fixed_header(s10, "Notebook Cell 9", "[Cell 9] Self-RAG 3단계 품질 게이트 (LLM-as-a-Judge)", "관련성(Relevance) ➔ 환각 검출(Grounding) ➔ 임상 안전성(Safety) 3중 검증 실측")
 
-add_card(s10, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🛡️ 3단계 이진 품질 평가 구조", [
-    "Gate 1. 영양 관련성 검증 (Relevance Check):\n  • 사용자 식단 ↔ DB 조회 식품 일치 여부 판정 (Yes/No)\n  • 불일치 시 쿼리 자동 재작성 (CRAG 보정)",
-    "Gate 2. 환각 수치 검출 (Hallucination Grounding):\n  • 칼로리/탄단지 수치와 DB 실측치 100% 일치 검증",
-    "Gate 3. 임상 안전 가드레일 (Clinical Safety):\n  • 초저열량 경고 및 의학적 면책 안내 자동 삽입"
-])
-
-add_code_card(s10, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 9: evaluate_self_rag_quality() Output", [
+# [좌측: 셀 실행 결과]
+add_code_card(s10, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 9: evaluate_self_rag_quality() Output", [
     "# [Self-RAG 3단계 품질 게이트 실행 결과]:",
     "{",
     "  'Gate_1_Relevance': 'yes',",
@@ -537,26 +543,27 @@ add_code_card(s10, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 
     "# Status: ✅ 3단계 품질 게이트 ALL PASS (최종 승인)"
 ], header_color=COLOR_CODE_GREEN)
 
+# [우측: 핵심 원리 설명]
+add_card(s10, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🛡️ 3단계 이진 품질 평가 구조", [
+    "Gate 1. 영양 관련성 검증 (Relevance Check):\n  • 사용자 식단 ↔ DB 조회 식품 일치 여부 판정 (Yes/No)\n  • 불일치 시 쿼리 자동 재작성 (CRAG 보정)",
+    "Gate 2. 환각 수치 검출 (Hallucination Grounding):\n  • 칼로리/탄단지 수치와 DB 실측치 100% 일치 검증",
+    "Gate 3. 임상 안전 가드레일 (Clinical Safety):\n  • 초저열량 경고 및 의학적 면책 안내 자동 삽입"
+])
+
 add_takeaway_strip(s10, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "철저한 환각 통제 (Zero-Hallucination Verified)",
     "LLM-as-a-Judge 평가를 통해 관련성, 사실 근거성, 임상 안전성을 3중 검증하여 안전한 답변만 제공합니다."
 )
 
 # ==========================================
-# Slide 11: [Cell 10] SQLite DB 연동 & 순 칼로리 집계
+# Slide 11: [Cell 10] SQLite DB 연동 & 순 칼로리 집계 (좌: 셀 코드 / 우: 설명)
 # ==========================================
 s11 = prs.slides.add_slide(blank_layout)
 set_slide_background(s11, COLOR_CANVAS_LIGHT)
 add_fixed_header(s11, "Notebook Cell 10", "[Cell 10] SQLite DB 연동 & 순 칼로리 집계 쿼리 실측", "get_daily_summary() 함수를 통한 섭취량 - 소모량 실시간 집계 검증")
 
-add_card(s11, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "💾 SQLite 데이터베이스 & 순 칼로리 연산", [
-    "테이블 구조: `users`, `meal_records`, `exercise_records`",
-    "순 칼로리 공식: `Net Calories = 총 섭취 칼로리 - 총 운동 소모량`",
-    "대시보드 실시간 반영: 일별 순 칼로리 게이지 및 도넛 차트",
-    "데이터 무결성: 사용자 ID 기반 완벽한 개인 데이터 격리"
-])
-
-add_code_card(s11, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 10: get_daily_summary(user_id=1)", [
+# [좌측: 셀 실행 결과]
+add_code_card(s11, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 10: get_daily_summary(user_id=1)", [
     "# [SQLite 일별 종합 집계 실측 쿼리 결과]:",
     "{",
     "  'total_cal': 235.0,       # 닭가슴살+사과 섭취량",
@@ -568,25 +575,28 @@ add_code_card(s11, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Cell 
     "# Status: ✅ SQLite DB Record Insert & Query Verified"
 ], header_color=COLOR_CODE_YELLOW)
 
+# [우측: 핵심 원리 설명]
+add_card(s11, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "💾 SQLite 데이터베이스 & 순 칼로리 연산", [
+    "테이블 구조: `users`, `meal_records`, `exercise_records`",
+    "순 칼로리 공식: `Net Calories = 총 섭취 칼로리 - 총 운동 소모량`",
+    "대시보드 실시간 반영: 일별 순 칼로리 게이지 및 도넛 차트",
+    "데이터 무결성: 사용자 ID 기반 완벽한 개인 데이터 격리"
+])
+
 add_takeaway_strip(s11, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "순 칼로리 에너지 균형 (Net Energy Balance)",
     "섭취 칼로리에서 운동 소모량을 차감한 순 칼로리를 실시간 연산하여 지속 가능한 다이어트를 지원합니다."
 )
 
 # ==========================================
-# Slide 12: [트러블슈팅 ①] 503/429/404 모델 복원력
+# Slide 12: [트러블슈팅 ①] 503/429/404 모델 복원력 (좌: 실측 로그 / 우: 설명)
 # ==========================================
 s12 = prs.slides.add_slide(blank_layout)
 set_slide_background(s12, COLOR_CANVAS_LIGHT)
 add_fixed_header(s12, "Troubleshooting 1", "실무 트러블슈팅 ① : 503/429/404 다중 모델 복원력", "구글 API 과부하, 속도 제한, 구모델 폐기 대응 4대 Flash 모델 폴백 구축")
 
-add_card(s12, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "🚨 3대 모델 장애 & 해결 조치", [
-    "Issue 1. `503 UNAVAILABLE` (일시 과부하)\n  ➔ 4대 Flash 모델 간 `0.5초 무중단 자동 폴백` 구축",
-    "Issue 2. `429 RESOURCE_EXHAUSTED` (속도 제한)\n  ➔ 1순위 모델을 넉넉한 `gemini-3.5-flash-lite`로 재구성",
-    "Issue 3. `404 NOT_FOUND` (구버전 2.5 폐기 대응)\n  ➔ 폐기된 구모델 완전 제거 및 3.5/3.6/3.7 최신화"
-])
-
-add_code_card(s12, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Live Fallback Execution Log (Self-Healing)", [
+# [좌측: 셀 실행 결과 로그]
+add_code_card(s12, Inches(0.8), Inches(1.75), Inches(5.72), Inches(3.4), "Live Fallback Execution Log (Self-Healing)", [
     "# [1. 503 / 429 감지 시 자동 폴백 루프]",
     "Attempt 1: Call [gemini-3.6-flash] -> 429 Limit",
     "🔄 Auto-Switching: [gemini-3.5-flash-lite]",
@@ -595,6 +605,13 @@ add_code_card(s12, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "Live 
     "✅ [gemini-3.5-flash-lite] 200 OK (분석 성공)",
     "Output: {'food_name': '닭가슴살', 'kcal': 135}"
 ], header_color=COLOR_ROSE)
+
+# [우측: 핵심 원리 설명]
+add_card(s12, Inches(6.81), Inches(1.75), Inches(5.72), Inches(3.4), "🚨 3대 모델 장애 & 해결 조치", [
+    "Issue 1. `503 UNAVAILABLE` (일시 과부하)\n  ➔ 4대 Flash 모델 간 `0.5초 무중단 자동 폴백` 구축",
+    "Issue 2. `429 RESOURCE_EXHAUSTED` (속도 제한)\n  ➔ 1순위 모델을 넉넉한 `gemini-3.5-flash-lite`로 재구성",
+    "Issue 3. `404 NOT_FOUND` (구버전 2.5 폐기 대응)\n  ➔ 폐기된 구모델 완전 제거 및 3.5/3.6/3.7 최신화"
+])
 
 add_takeaway_strip(s12, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
     "고가용성 복원력 (Fault-Tolerant Resilience)",
@@ -654,4 +671,4 @@ add_takeaway_strip(s14, Inches(0.8), Inches(5.35), Inches(11.73), Inches(1.45),
 # 저장
 output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "AI_Diet_Coach_Presentation.pptx")
 prs.save(output_path)
-print(f"✅ MVP 1장 요약 + 노트북 셀별 실측 + 트러블슈팅 14장 PPT 생성 완료: {output_path}")
+print(f"✅ 셀(코드/로그)=왼쪽, 설명=오른쪽으로 레이아웃 반전된 14장 PPT 생성 완료: {output_path}")
