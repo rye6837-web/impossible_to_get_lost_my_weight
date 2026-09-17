@@ -1,10 +1,13 @@
 import os
 import pandas as pd
 
-# 1. 경로 설정 (파이썬 파일 위치 기준으로 data 폴더와 저장 경로 지정)
+# 1. 경로 설정 (data/raw에서 읽고 data/processed에 저장)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# ../data 폴더 지정
-DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', 'data'))
+DATA_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..'))
+RAW_DIR = os.path.join(DATA_ROOT, 'raw')
+PROCESSED_DIR = os.path.join(DATA_ROOT, 'processed')
+
+os.makedirs(PROCESSED_DIR, exist_ok=True)
 
 # 2. 추출할 핵심 컬럼 목록 (영양 진단 핵심 지표)
 columns = [
@@ -21,7 +24,11 @@ file_names = [
 
 df_list = []
 for file_name in file_names:
-    file_path = os.path.join(DATA_DIR, file_name)
+    file_path = os.path.join(RAW_DIR, file_name)
+    if not os.path.exists(file_path):
+        # fallback to DATA_ROOT if not in raw/
+        file_path = os.path.join(DATA_ROOT, file_name)
+        
     try:
         # UTF-8 또는 CP949(EUC-KR) 인코딩 자동 대응
         try:
@@ -40,9 +47,9 @@ if df_list:
     # 결측치(NaN) 0으로 보정
     combined_df.fillna(0, inplace=True)
     
-    output_path = os.path.join(BASE_DIR, 'merged_food_nutrition.csv')
+    output_path = os.path.join(PROCESSED_DIR, 'merged_food_nutrition.csv')
     combined_df.to_csv(output_path, index=False, encoding='utf-8-sig')
     print(f"\n✅ 통합 완료: 총 {len(combined_df):,}건의 영양 데이터가 생성되었습니다.")
     print(f"저장 위치: {output_path}")
 else:
-    print(f"\n❌ data 폴더({DATA_DIR})에서 CSV 파일을 찾을 수 없습니다.")
+    print(f"\n❌ raw 폴더({RAW_DIR})에서 CSV 파일을 찾을 수 없습니다.")

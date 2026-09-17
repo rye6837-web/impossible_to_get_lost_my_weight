@@ -168,6 +168,7 @@ def calculate_exercise_calories(
         "METs계수": mets,
         "소모칼로리(kcal)": burned_calories,
         "AI맞춤추정여부": is_custom,
+        "출처": "미국스포츠의학회(ACSM) 및 Ainsworth Compendium 공인 METs 가이드라인",
         "설명": f"{user_weight}kg 기준 {matched_name} {duration_minutes}분 수행 시 약 {burned_calories} kcal 소모"
     }
 

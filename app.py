@@ -1,5 +1,15 @@
 import os
 import sys
+
+# Windows cp949 인코딩 환경 대응 (UTF-8 입출력 보장)
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
+
 from datetime import datetime, date
 from PIL import Image
 import streamlit as st
@@ -12,7 +22,18 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from ai_agent.diet_agent import create_diet_agent, parse_agent_metadata
+import importlib
+import ai_agent.diet_agent as agent_module
+try:
+    importlib.reload(agent_module)
+except Exception:
+    pass
+
+create_diet_agent = agent_module.create_diet_agent
+parse_agent_metadata = agent_module.parse_agent_metadata
+test_gemini_api_key = agent_module.test_gemini_api_key
+clean_api_key = agent_module.clean_api_key
+
 from app_services.telegram_service import send_telegram_monthly_report, send_telegram_message, get_telegram_bot_token
 
 def get_or_create_agent(api_key: str = ""):
@@ -22,7 +43,7 @@ def get_or_create_agent(api_key: str = ""):
         return None
 
 def send_agent_message_safe(contents) -> str:
-    """구버전 모델 캐시 오류 시 최신 gemini-3.6-flash 모델로 자동 복구하여 호출합니다."""
+    """구버전 모델 캐시 오류 시 최신 gemini 모델로 자동 복구하여 호출합니다."""
     if st.session_state.agent is None:
         st.session_state.agent = get_or_create_agent()
     if st.session_state.agent is None:
@@ -32,6 +53,12 @@ def send_agent_message_safe(contents) -> str:
         return st.session_state.agent.send_message(contents)
     except Exception as e:
         err_str = str(e)
+        if "API_KEY_INVALID" in err_str or "API key not valid" in err_str or "INVALID_ARGUMENT" in err_str:
+            # API 키 오류 시 에이전트와 잘못된 세션 키를 즉시 초기화하여 재입력 유도
+            st.session_state.agent = None
+            if "GEMINI_API_KEY" in st.session_state:
+                del st.session_state["GEMINI_API_KEY"]
+            raise ValueError("⚠️ 등록된 Gemini API 키가 유효하지 않습니다 (400 INVALID_ARGUMENT). Google AI Studio에서 올바른 키를 발급받아 다시 등록해주세요.")
         if "404" in err_str or "gemini-2.5-flash" in err_str or "NOT_FOUND" in err_str:
             # 구버전 세션 캐시 자동 갱신 및 재시도
             st.session_state.agent = get_or_create_agent()
@@ -189,6 +216,56 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
         
+    # Gemini API 키 관리
+    with st.expander("🔑 Gemini API 키 설정 / 변경", expanded=(st.session_state.agent is None)):
+        current_k = st.session_state.get("GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
+        if current_k:
+            masked = current_k[:6] + "..." + current_k[-4:] if len(current_k) > 10 else "***"
+            st.caption(f"상태: 🟢 등록됨 (`{masked}`)")
+        else:
+            st.caption("상태: 🔴 미등록 (AI 코칭 불가)")
+            
+        with st.form("sidebar_api_key_form"):
+            new_key = st.text_input("새 Gemini API 키", type="password", placeholder="AIzaSy...", key="sidebar_key_input")
+            persist_box = st.checkbox("이 PC에 영구 저장 (.streamlit/secrets.toml)", value=True, key="sidebar_persist_box")
+            submit_key = st.form_submit_button("API 키 검증 및 적용", use_container_width=True, type="primary")
+            
+            if submit_key:
+                clean_k = clean_api_key(new_key)
+                if not clean_k:
+                    st.error("API 키를 입력해주세요.")
+                else:
+                    with st.spinner("API 키 유효성 검증 중..."):
+                        is_valid, msg = test_gemini_api_key(clean_k)
+                        if is_valid:
+                            st.session_state["GEMINI_API_KEY"] = clean_k
+                            st.session_state.agent = create_diet_agent(api_key=clean_k)
+                            if persist_box:
+                                try:
+                                    os.makedirs(".streamlit", exist_ok=True)
+                                    with open(os.path.join(".streamlit", "secrets.toml"), "w", encoding="utf-8") as f:
+                                        f.write(f'GEMINI_API_KEY = "{clean_k}"\n')
+                                except Exception:
+                                    pass
+                            st.success("✅ 유효한 API 키가 적용되었습니다!")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+                            
+        if current_k:
+            if st.button("🗑️ API 키 초기화", key="btn_clear_apikey", use_container_width=True):
+                if "GEMINI_API_KEY" in st.session_state:
+                    del st.session_state["GEMINI_API_KEY"]
+                st.session_state.agent = None
+                try:
+                    sec_path = os.path.join(".streamlit", "secrets.toml")
+                    if os.path.exists(sec_path):
+                        os.remove(sec_path)
+                except Exception:
+                    pass
+                st.warning("API 키가 초기화되었습니다.")
+                st.rerun()
+        
     st.divider()
     
     # 오늘 영양 및 순 칼로리 요약 미니 배너
@@ -303,19 +380,33 @@ with tab_coach:
     
     # API 키 미등록 시 입력 안내
     if st.session_state.agent is None:
-        st.warning("⚠️ Google Gemini API 키가 아직 설정되지 않았습니다.")
+        st.warning("⚠️ Google Gemini API 키가 아직 설정되지 않았거나 유효하지 않습니다.")
         with st.form("api_key_form"):
-            input_key = st.text_input("Gemini API Key", type="password", placeholder="AIzaSy...")
-            save_key_btn = st.form_submit_button("API 키 적용", type="primary")
-            if save_key_btn and input_key.strip():
-                st.session_state["GEMINI_API_KEY"] = input_key.strip()
-                try:
-                    st.session_state.agent = create_diet_agent(api_key=input_key.strip())
-                    st.success("✅ API 키가 성공적으로 등록되었습니다!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"API 키 등록 실패: {e}")
-        st.info("💡 Tip: `.streamlit/secrets.toml` 파일에 `GEMINI_API_KEY = '...'`를 등록해두시면 자동 로드됩니다.")
+            input_key = st.text_input("Gemini API Key", type="password", placeholder="AIzaSy로 시작하는 키 입력")
+            persist_key = st.checkbox("이 PC에 영구 저장 (.streamlit/secrets.toml)", value=True, key="coach_persist_key")
+            save_key_btn = st.form_submit_button("API 키 검증 및 적용", type="primary")
+            if save_key_btn:
+                clean_k = clean_api_key(input_key)
+                if not clean_k:
+                    st.error("API 키를 입력해주세요.")
+                else:
+                    with st.spinner("Google API 서버와 통신하여 키 유효성 검증 중..."):
+                        is_valid, msg = test_gemini_api_key(clean_k)
+                        if is_valid:
+                            st.session_state["GEMINI_API_KEY"] = clean_k
+                            st.session_state.agent = create_diet_agent(api_key=clean_k)
+                            if persist_key:
+                                try:
+                                    os.makedirs(".streamlit", exist_ok=True)
+                                    with open(os.path.join(".streamlit", "secrets.toml"), "w", encoding="utf-8") as f:
+                                        f.write(f'GEMINI_API_KEY = "{clean_k}"\n')
+                                except Exception:
+                                    pass
+                            st.success("✅ 유효한 API 키가 성공적으로 등록되었습니다!")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+        st.info("💡 **Gemini API 키 발급 방법**: [Google AI Studio (aistudio.google.com)](https://aistudio.google.com/)에서 'Get API key' ➔ 'Create API key'를 클릭하여 무료로 발급받으실 수 있습니다 (AIzaSy로 시작).")
     
     # 📸 사진 업로드 / 카메라 촬영 섹션
     with st.expander("📸 음식 사진으로 식단 분석하기", expanded=False):
@@ -357,21 +448,166 @@ with tab_coach:
                             st.session_state.messages.append({"role": "assistant", "content": f"오류 발생: {e}"})
                     st.rerun()
 
-    # 대화 기록 렌더링 (Human-in-the-Loop 스마트 저장 카드 연동)
+    # 대화 기록 렌더링 (Human-in-the-Loop 스마트 저장 카드 & 출처 뱃지 연동)
     for idx, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg["role"]):
             if "image" in msg and msg["image"]:
                 st.image(msg["image"], width=300)
-            st.markdown(msg["content"])
             
-            # [1순위 핵심] AI가 감지한 식단 정보 스마트 저장 카드
-            if msg["role"] == "assistant" and msg.get("meal_meta"):
+            # 출처(Citation) 블록 분리 및 시각화
+            msg_content = msg.get("content", "")
+            if "API_KEY_INVALID" in msg_content or "API key not valid" in msg_content or "400 INVALID_ARGUMENT" in msg_content:
+                st.error(
+                    "❌ **Google Gemini API 키 오류 (400 INVALID_ARGUMENT)**\n\n"
+                    "현재 설정된 API 키가 Google API 서버에서 거절되었습니다.\n\n"
+                    "• [Google AI Studio](https://aistudio.google.com/)에서 'AIzaSy...'로 시작하는 Gemini API 키를 복사하여 다시 입력해주세요.\n"
+                    "• 아래 **[🔑 새 API 키 입력하기]** 버튼을 누르면 입력창이 바로 열립니다."
+                )
+                if st.button("🔑 새 API 키 입력하기", key=f"reenter_key_btn_{idx}", type="primary"):
+                    st.session_state.agent = None
+                    if "GEMINI_API_KEY" in st.session_state:
+                        del st.session_state["GEMINI_API_KEY"]
+                    st.rerun()
+            elif "📌 [참조 근거:" in msg_content:
+                main_part, cite_part = msg_content.split("📌 [참조 근거:", 1)
+                st.markdown(main_part.strip())
+                cite_label = cite_part.split("]")[0].strip() if "]" in cite_part else cite_part.strip()
+                st.info(f"📌 **검증된 공식 출처**: {cite_label}", icon="🛡️")
+            else:
+                st.markdown(msg_content)
+            
+            # [핵심] AI가 감지한 식단/운동 정보 스마트 멀티 카드 렌더링
+            has_meal = bool(msg["role"] == "assistant" and msg.get("meal_meta"))
+            has_ex = bool(msg["role"] == "assistant" and msg.get("ex_meta"))
+            
+            # 1. 식단과 운동이 모두 감지된 경우 -> 2열 멀티 카드 및 [⚡ 원클릭 동시 저장] 지원
+            if has_meal and has_ex:
+                m_data = msg["meal_meta"]
+                e_data = msg["ex_meta"]
+                
+                with st.container():
+                    st.success("🎉 **식단과 운동이 모두 감지되었습니다!** (한 번에 동시 저장하거나 개별 확인/수정할 수 있습니다)")
+                    
+                    # [⚡ 원클릭 동시 저장 마스터 버튼]
+                    if st.button("⚡ 식단 & 운동 한 번에 DB 동시 저장", key=f"save_both_{idx}", type="primary", use_container_width=True):
+                        # 식단 저장 데이터 취합
+                        s_name = st.session_state.get(f"adj_food_{idx}", m_data.get("food_name", "식단"))
+                        s_cal = float(st.session_state.get(f"adj_cal_{idx}", m_data.get("calories", 0)))
+                        s_carbs = float(st.session_state.get(f"adj_carb_{idx}", m_data.get("carbs", 0)))
+                        s_prot = float(st.session_state.get(f"adj_prot_{idx}", m_data.get("protein", 0)))
+                        s_fat = float(st.session_state.get(f"adj_fat_{idx}", m_data.get("fat", 0)))
+                        s_sod = float(st.session_state.get(f"adj_sod_{idx}", m_data.get("sodium", 0)))
+                        s_sug = float(m_data.get("sugar", 0))
+                        s_mtype = st.session_state.get(f"card_mtype_{idx}", m_data.get("meal_type", "점심"))
+                        
+                        ok_m, msg_m = add_meal_record(
+                            user_id=user_id,
+                            food_name=s_name,
+                            calories=s_cal,
+                            carbs=s_carbs,
+                            protein=s_prot,
+                            fat=s_fat,
+                            sugar=s_sug,
+                            sodium=s_sod,
+                            meal_type=s_mtype
+                        )
+                        
+                        # 운동 저장 데이터 취합
+                        s_exname = st.session_state.get(f"adj_exname_{idx}", e_data.get("exercise_name", "운동"))
+                        s_exmin = float(st.session_state.get(f"adj_exmin_{idx}", e_data.get("duration_min", 30)))
+                        s_excal = float(st.session_state.get(f"adj_excal_{idx}", e_data.get("calories_burned", 0)))
+                        
+                        ok_e, msg_e = add_exercise_record(
+                            user_id=user_id,
+                            exercise_name=s_exname,
+                            duration_min=s_exmin,
+                            calories_burned=s_excal
+                        )
+                        
+                        if ok_m and ok_e:
+                            st.success("✅ 식단과 운동이 개인 DB에 모두 안전하게 저장되었습니다!")
+                            st.rerun()
+                        else:
+                            st.error(f"저장 중 일부 오류: 식단({msg_m}) / 운동({msg_e})")
+                    
+                    # 2열 나란히 멀티 카드 노출
+                    c_meal_col, c_ex_col = st.columns(2)
+                    
+                    with c_meal_col:
+                        st.markdown(f"🍱 **[식단]**: **{m_data.get('food_name', '식단')}** ({m_data.get('calories', 0)} kcal)")
+                        with st.expander("✏️ 식단 세부 수정", expanded=False):
+                            adj_food = st.text_input("음식명", value=m_data.get("food_name", "식단"), key=f"adj_food_{idx}")
+                            adj_cal = st.number_input("칼로리 (kcal)", value=float(m_data.get("calories", 0)), step=10.0, key=f"adj_cal_{idx}")
+                            adj_carbs = st.number_input("탄수화물 (g)", value=float(m_data.get("carbs", 0)), step=1.0, key=f"adj_carb_{idx}")
+                            adj_protein = st.number_input("단백질 (g)", value=float(m_data.get("protein", 0)), step=1.0, key=f"adj_prot_{idx}")
+                            adj_fat = st.number_input("지방 (g)", value=float(m_data.get("fat", 0)), step=1.0, key=f"adj_fat_{idx}")
+                            adj_sodium = st.number_input("나트륨 (mg)", value=float(m_data.get("sodium", 0)), step=10.0, key=f"adj_sod_{idx}")
+                            
+                        m_type = st.selectbox(
+                            "식사 분류", 
+                            ["아침", "점심", "저녁", "간식", "야식"], 
+                            index=["아침", "점심", "저녁", "간식", "야식"].index(m_data.get("meal_type", "점심")) if m_data.get("meal_type") in ["아침", "점심", "저녁", "간식", "야식"] else 1,
+                            key=f"card_mtype_{idx}"
+                        )
+                        if st.button("💾 식단만 개별 저장", key=f"save_meal_card_{idx}", use_container_width=True):
+                            ok, res_msg = add_meal_record(
+                                user_id=user_id,
+                                food_name=st.session_state.get(f"adj_food_{idx}", m_data.get("food_name", "식단")),
+                                calories=float(st.session_state.get(f"adj_cal_{idx}", m_data.get("calories", 0))),
+                                carbs=float(st.session_state.get(f"adj_carb_{idx}", m_data.get("carbs", 0))),
+                                protein=float(st.session_state.get(f"adj_prot_{idx}", m_data.get("protein", 0))),
+                                fat=float(st.session_state.get(f"adj_fat_{idx}", m_data.get("fat", 0))),
+                                sugar=float(m_data.get("sugar", 0)),
+                                sodium=float(st.session_state.get(f"adj_sod_{idx}", m_data.get("sodium", 0))),
+                                meal_type=m_type
+                            )
+                            if ok:
+                                st.success("✅ 식단이 성공적으로 저장되었습니다!")
+                                st.rerun()
+                                
+                    with c_ex_col:
+                        st.markdown(f"🔥 **[운동]**: **{e_data.get('exercise_name', '운동')}** ({e_data.get('duration_min', 30)}분 | **{e_data.get('calories_burned', 0)} kcal**)")
+                        with st.expander("✏️ 운동 세부 수정", expanded=False):
+                            adj_ex_name = st.text_input("운동명", value=e_data.get("exercise_name", "운동"), key=f"adj_exname_{idx}")
+                            adj_ex_min = st.number_input("운동 시간 (분)", value=float(e_data.get("duration_min", 30)), step=5.0, key=f"adj_exmin_{idx}")
+                            adj_ex_cal = st.number_input("소모 칼로리 (kcal)", value=float(e_data.get("calories_burned", 0)), step=10.0, key=f"adj_excal_{idx}")
+                            
+                        if st.button("💾 운동만 개별 저장", key=f"save_ex_card_{idx}", use_container_width=True):
+                            ok, res_msg = add_exercise_record(
+                                user_id=user_id,
+                                exercise_name=st.session_state.get(f"adj_exname_{idx}", e_data.get("exercise_name", "운동")),
+                                duration_min=float(st.session_state.get(f"adj_exmin_{idx}", e_data.get("duration_min", 30))),
+                                calories_burned=float(st.session_state.get(f"adj_excal_{idx}", e_data.get("calories_burned", 0)))
+                            )
+                            if ok:
+                                st.success("✅ 운동 기록이 성공적으로 저장되었습니다!")
+                                st.rerun()
+
+            # 2. 식단만 단독 감지된 경우
+            elif has_meal:
                 m_data = msg["meal_meta"]
                 with st.container():
+                    is_estimated = "추정" in m_data.get("food_name", "") or "미등록" in m_data.get("food_name", "")
+                    card_title = f"🍱 **[감지된 식단]**: **{m_data.get('food_name', '식단')}**"
+                    if is_estimated:
+                        card_title += " *(조리법 표준 추정치)*"
+                        
                     st.markdown(
-                        f"🍱 **[감지된 식단]**: **{m_data.get('food_name', '식단')}** "
+                        f"{card_title} "
                         f"({m_data.get('calories', 0)} kcal | 탄 {m_data.get('carbs', 0)}g · 단 {m_data.get('protein', 0)}g · 지 {m_data.get('fat', 0)}g)"
                     )
+                    
+                    with st.expander("✏️ 섭취량/칼로리 직접 수정하기 (선택 사항)", expanded=False):
+                        c_adj1, c_adj2 = st.columns(2)
+                        with c_adj1:
+                            adj_food = st.text_input("음식명", value=m_data.get("food_name", "식단"), key=f"adj_food_{idx}")
+                            adj_cal = st.number_input("칼로리 (kcal)", value=float(m_data.get("calories", 0)), step=10.0, key=f"adj_cal_{idx}")
+                            adj_carbs = st.number_input("탄수화물 (g)", value=float(m_data.get("carbs", 0)), step=1.0, key=f"adj_carb_{idx}")
+                        with c_adj2:
+                            adj_protein = st.number_input("단백질 (g)", value=float(m_data.get("protein", 0)), step=1.0, key=f"adj_prot_{idx}")
+                            adj_fat = st.number_input("지방 (g)", value=float(m_data.get("fat", 0)), step=1.0, key=f"adj_fat_{idx}")
+                            adj_sodium = st.number_input("나트륨 (mg)", value=float(m_data.get("sodium", 0)), step=10.0, key=f"adj_sod_{idx}")
+                    
                     c_btn1, c_btn2 = st.columns([2, 3])
                     with c_btn1:
                         m_type = st.selectbox(
@@ -382,15 +618,23 @@ with tab_coach:
                         )
                     with c_btn2:
                         if st.button("💾 이 식단 DB에 바로 저장", key=f"save_meal_card_{idx}", type="primary", use_container_width=True):
+                            save_name = st.session_state.get(f"adj_food_{idx}", m_data.get("food_name", "식단"))
+                            save_cal = float(st.session_state.get(f"adj_cal_{idx}", m_data.get("calories", 0)))
+                            save_carbs = float(st.session_state.get(f"adj_carb_{idx}", m_data.get("carbs", 0)))
+                            save_protein = float(st.session_state.get(f"adj_prot_{idx}", m_data.get("protein", 0)))
+                            save_fat = float(st.session_state.get(f"adj_fat_{idx}", m_data.get("fat", 0)))
+                            save_sodium = float(st.session_state.get(f"adj_sod_{idx}", m_data.get("sodium", 0)))
+                            save_sugar = float(m_data.get("sugar", 0))
+                            
                             ok, res_msg = add_meal_record(
                                 user_id=user_id,
-                                food_name=m_data.get("food_name", "식단"),
-                                calories=float(m_data.get("calories", 0)),
-                                carbs=float(m_data.get("carbs", 0)),
-                                protein=float(m_data.get("protein", 0)),
-                                fat=float(m_data.get("fat", 0)),
-                                sugar=float(m_data.get("sugar", 0)),
-                                sodium=float(m_data.get("sodium", 0)),
+                                food_name=save_name,
+                                calories=save_cal,
+                                carbs=save_carbs,
+                                protein=save_protein,
+                                fat=save_fat,
+                                sugar=save_sugar,
+                                sodium=save_sodium,
                                 meal_type=m_type
                             )
                             if ok:
@@ -399,20 +643,31 @@ with tab_coach:
                             else:
                                 st.error(res_msg)
 
-            # [2순위 핵심] AI가 감지한 운동 정보 스마트 저장 카드
-            if msg["role"] == "assistant" and msg.get("ex_meta"):
+            # 3. 운동만 단독 감지된 경우
+            elif has_ex:
                 e_data = msg["ex_meta"]
                 with st.container():
                     st.markdown(
                         f"🔥 **[감지된 운동]**: **{e_data.get('exercise_name', '운동')}** "
                         f"({e_data.get('duration_min', 30)}분 | **{e_data.get('calories_burned', 0)} kcal** 소모)"
                     )
+                    with st.expander("✏️ 운동 시간/칼로리 직접 수정하기", expanded=False):
+                        c_ex1, c_ex2 = st.columns(2)
+                        with c_ex1:
+                            adj_ex_name = st.text_input("운동명", value=e_data.get("exercise_name", "운동"), key=f"adj_exname_{idx}")
+                            adj_ex_min = st.number_input("운동 시간 (분)", value=float(e_data.get("duration_min", 30)), step=5.0, key=f"adj_exmin_{idx}")
+                        with c_ex2:
+                            adj_ex_cal = st.number_input("소모 칼로리 (kcal)", value=float(e_data.get("calories_burned", 0)), step=10.0, key=f"adj_excal_{idx}")
+                            
                     if st.button("💾 이 운동 DB에 바로 저장", key=f"save_ex_card_{idx}", type="primary", use_container_width=True):
+                        save_ex = st.session_state.get(f"adj_exname_{idx}", e_data.get("exercise_name", "운동"))
+                        save_min = float(st.session_state.get(f"adj_exmin_{idx}", e_data.get("duration_min", 30)))
+                        save_burn = float(st.session_state.get(f"adj_excal_{idx}", e_data.get("calories_burned", 0)))
                         ok, res_msg = add_exercise_record(
                             user_id=user_id,
-                            exercise_name=e_data.get("exercise_name", "운동"),
-                            duration_min=float(e_data.get("duration_min", 30)),
-                            calories_burned=float(e_data.get("calories_burned", 0))
+                            exercise_name=save_ex,
+                            duration_min=save_min,
+                            calories_burned=save_burn
                         )
                         if ok:
                             st.success("✅ 운동 기록이 개인 DB에 성공적으로 저장되었습니다!")
@@ -421,17 +676,30 @@ with tab_coach:
                             st.error(res_msg)
 
     # 텍스트 입력창
-    if prompt := st.chat_input("식단, 운동, 또는 영양 질문을 입력하세요! (예: 점심에 김치찌개 먹었어 / 오늘 러닝 30분 했어 / 혈당 관리 팁 알려줘)"):
+    if prompt := st.chat_input("식단, 운동, 또는 영양 질문을 입력하세요! (예: 점심에 김치찌개 먹고 40분 러닝했어 / 오늘 스쿼트 30분 했어 / 혈당 관리 팁 알려줘)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
             with st.spinner("AI 웰니스 코치 분석 중..."):
+                # 복합 질문 의도(식단 + 운동) 스마트 감지
+                has_food_q = any(k in prompt for k in ["먹", "식단", "칼로리", "아침", "점심", "저녁", "야식", "간식", "음식", "밥", "찌개", "샐러드", "고기", "라면", "치킨", "삼겹살", "피자"])
+                has_ex_q = any(k in prompt for k in ["운동", "러닝", "헬스", "수영", "자전거", "뛰", "걸었", "스쿼트", "소모", "유산소", "근력", "싸이클", "조깅", "웨이트"])
+                
+                if has_food_q and has_ex_q:
+                    intent_hint = (
+                        "\n[복합 질의 안내: 사용자의 입력에 '식단'과 '운동'이 모두 포함되어 있습니다. "
+                        "search_food_nutrition과 calculate_exercise_calories 두 도구를 반드시 모두 호출하여 둘 다 분석하고, "
+                        "응답 마지막 줄에 <!-- MEAL_DATA: {...} -->와 <!-- EXERCISE_DATA: {...} --> 두 태그를 각각 독립된 줄로 모두 포함해주세요.]"
+                    )
+                else:
+                    intent_hint = "\n식단 분석 완료 시 <!-- MEAL_DATA: {...} --> 태그를, 운동 계산 완료 시 <!-- EXERCISE_DATA: {...} --> 태그를 마지막 줄에 포함해주세요."
+
                 context_prompt = (
                     f"[사용자 정보: 체중 {user_weight}kg, 일일 목표: {target_cal}kcal, 단백질 {target_protein}g]\n"
                     f"{prompt}\n"
-                    "식단 분석 완료 시 <!-- MEAL_DATA: {...} --> 태그를, 운동 계산 완료 시 <!-- EXERCISE_DATA: {...} --> 태그를 마지막 줄에 포함해주세요."
+                    f"{intent_hint}"
                 )
                 try:
                     response_text = send_agent_message_safe(context_prompt)
